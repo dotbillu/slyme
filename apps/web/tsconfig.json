@@ -9,11 +9,11 @@
     "strictNullChecks": true
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "next-env.d.ts",
-    "next.config.js",
-    ".next/types/**/*.ts"
+    "../web/**/*.ts",
+    "../web/**/*.tsx",
+    "../web/next-env.d.ts",
+    "../web/next.config.js",
+    "../web/.next/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["../web/node_modules"]
 }
