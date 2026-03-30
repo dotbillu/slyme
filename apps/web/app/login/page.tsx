@@ -6,7 +6,7 @@ export default function Login() {
   const handleSuccess = async (credentialResponse: any) => {
     const token = credentialResponse.credential;
 
-    await fetch("http://localhost:3001/auth/oauth", {
+    await fetch("http://localhost:3001/auth/signin/oauth", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
