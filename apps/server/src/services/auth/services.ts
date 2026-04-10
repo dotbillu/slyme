@@ -1,7 +1,7 @@
-import { User } from "../../generated/prisma/browser";
 import { prisma } from "../../lib/prisma";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { User } from "@prisma/client";
 interface GooglePayload {
   sub: string;
   email?: string;

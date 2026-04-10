@@ -9,7 +9,7 @@ import {
   generateToken,
   getUserbyEmail,
 } from "../../../services/auth/services";
-import { User } from "../../../generated/prisma/client";
+import { User } from "@prisma/client";
 
 router.post("/oauth", verifyGoogleToken, async (req, res) => {
   const payload = (req as any).googlePayload;
