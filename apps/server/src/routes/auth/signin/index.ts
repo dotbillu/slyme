@@ -6,10 +6,7 @@ const router: ExpressRouter = Router();
 import "dotenv/config";
 import { verifyGoogleToken } from "../../../middlewares/auth/oauth";
 import { User } from "../../../generated/prisma/client";
-import {
-  generateToken,
-  getUserbyEmail,
-} from "../../../services/auth/services";
+import { generateToken, getUserbyEmail } from "../../../services/auth/services";
 import { validateCredentials } from "../../../middlewares/auth/credentials";
 
 router.post("/oauth", verifyGoogleToken, async (req, res) => {
@@ -20,13 +17,27 @@ router.post("/oauth", verifyGoogleToken, async (req, res) => {
     return res.status(403).json({ error: "Not registered pls signUp" });
 
   const appToken = generateToken(user);
-  return res.json({ message: "Auth success", user, token: appToken });
+  res.cookie("token", appToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  return res.json({ message: "Auth success", user });
 });
 
 router.post("/credentials", validateCredentials, async (req, res) => {
   const user = (req as any).user;
   const appToken = generateToken(user);
-  return res.json({ message: "Auth success", user, token: appToken });
+  res.cookie("token", appToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  return res.json({ message: "Auth success", user });
 });
 
 export default router;

@@ -19,8 +19,14 @@ router.post("/oauth", verifyGoogleToken, async (req, res) => {
     return res.status(403).json({ error: "User already Exists ,Pls login" });
   user = await createUserOauth(payload);
   const appToken = generateToken(user);
+  res.cookie("token", appToken, {
+    httpOnly: true,
+    secure: false, // true in prod
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
 
-  return res.json({ message: "Auth success", user, token: appToken });
+  return res.json({ message: "Auth success", user });
 });
 
 router.post("/credentials", async (req, res) => {
@@ -31,13 +37,21 @@ router.post("/credentials", async (req, res) => {
       .status(400)
       .json({ error: "invalid username,dont use special charecters" });
   }
+  console.log("EMAIL:", email);
   let user = await getUserbyEmail(email);
   if (user) {
     return res.status(403).json({ error: "username already exists" });
   }
   user = await createUserByCredentials({ name, username, password, email });
   const appToken = generateToken(user);
-  return res.json({ message: "User Registered", user, token: appToken });
+  res.cookie("token", appToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  return res.json({ message: "Auth success", user });
 });
 
 export default router;

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { authSignUp } from "@/services/auth/service";
 
 export default function Signup() {
   const router = useRouter();
@@ -20,13 +21,13 @@ export default function Signup() {
   };
 
   const handleSubmit = async () => {
-    await fetch("http://localhost:3001/auth/signup", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(form),
-    });
+    try {
+      const res = await authSignUp(form);
+      console.log(res);
+      router.push("/dashboard");
+    } catch (err: any) {
+      console.log(err.message);
+    }
   };
 
   const handleSuccess = async (credentialResponse: any) => {
