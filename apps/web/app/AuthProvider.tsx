@@ -1,49 +1,37 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
 import { getMe } from "@/services/auth/service";
 
-const AuthContext = createContext<any>(null);
+const AuthContext = createContext<any>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [checked, setChecked] = useState(false);
-
-  const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     const check = async () => {
       try {
         const data = await getMe();
         setUser(data);
+        setChecked(true);
       } catch {
         setUser(null);
-      } finally {
         setChecked(true);
       }
     };
 
     check();
   }, []);
-
-  useEffect(() => {
-    if (!checked) return;
-
-    const isAuthPage = pathname === "/signup" || pathname === "/signin";
-
-    if (!user && !isAuthPage) router.replace("/signup");
-    if (user && isAuthPage) router.replace("/");
-  }, [checked, user, pathname]);
-
-  if (!checked) return null;
-
   return (
-    <AuthContext.Provider value={{ user, setUser }}>
+    <AuthContext.Provider value={{ user, setUser, checked }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
+  return ctx;
+};
