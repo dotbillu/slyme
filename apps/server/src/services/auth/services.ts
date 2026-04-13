@@ -57,7 +57,7 @@ export async function createUserByCredentials(
 
 export function generateToken(user: User) {
   const token = jwt.sign(
-    { id: user.id, email: user.email },
+    { id: user.id, username: user.username, email: user.email },
     process.env.JWT_SECRET as string,
     { expiresIn: "7d" },
   );

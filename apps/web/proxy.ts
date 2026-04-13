@@ -9,8 +9,10 @@ export function proxy(req: NextRequest) {
   const isAuthPage =
     pathname.startsWith("/signin") || pathname.startsWith("/signup");
 
-  const isProtected = pathname === "/" || pathname.startsWith("/dashboard");
-
+  const isProtected =
+    pathname === "/" ||
+    pathname === "/get-started";
+  
   if (!token && isProtected) {
     return NextResponse.redirect(new URL("/signin", req.url));
   }
