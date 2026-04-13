@@ -16,14 +16,6 @@ export default function Signup() {
   const { setUser } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) window.location.reload();
-    };
-    window.addEventListener("pageshow", handlePageShow);
-    return () => window.removeEventListener("pageshow", handlePageShow);
-  }, []);
-
   const [form, setForm] = useState({
     name: "",
     username: "",
@@ -49,7 +41,7 @@ export default function Signup() {
       const user = await CredentialSignUp(form);
 
       setUser(user);
-      window.location.replace("/");
+      router.replace("/");
     } catch (err: any) {
       setError(err.message || "Signup failed");
     } finally {
@@ -85,7 +77,7 @@ export default function Signup() {
       const user = await oauthSignUpUser(googleToken, username);
 
       setUser(user);
-      window.location.replace("/");
+      router.replace("/");
     } catch (err: any) {
       setError(err.message || "Something went wrong");
     } finally {

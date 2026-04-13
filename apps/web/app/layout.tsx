@@ -15,6 +15,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){
+                var n=performance.getEntriesByType("navigation");
+                if(n.length&&n[0].type==="back_forward"){window.location.reload();return}
+                window.addEventListener("pageshow",function(e){if(e.persisted)window.location.reload()})
+              })()
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           <GoogleOAuthProvider

@@ -10,5 +10,14 @@ export default function Home() {
     }
     getmebro();
   }, []);
-  return <div>hi</div>;
+  return (
+    <div className="bg-black h-screen w-screen flex justify-center items-center">
+      <button
+        onClick={() => {
+          alert("click ");
+        }}
+        className=" border borer white"
+      >click</button>
+    </div>
+  );
 }

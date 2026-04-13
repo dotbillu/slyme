@@ -31,14 +31,6 @@ export default function Login() {
     }
   }, [checked, user, router]);
 
-  useEffect(() => {
-    const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) window.location.reload();
-    };
-    window.addEventListener("pageshow", handlePageShow);
-    return () => window.removeEventListener("pageshow", handlePageShow);
-  }, []);
-
   const handleLogin = async () => {
     if (loading) return;
     try {
@@ -48,7 +40,7 @@ export default function Login() {
       const user = await CredentialSignIn(details.username, details.password);
 
       setUser(user);
-      window.location.replace("/");
+      router.replace("/");
     } catch (err: any) {
       setOauthError(null);
       setCredError(err.message);
