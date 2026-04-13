@@ -14,7 +14,7 @@ import {
 import { useAuth } from "@/app/AuthProvider";
 
 export default function Signup() {
-  const { setUser } = useAuth();
+  const {setUser } = useAuth();
   const router = useRouter();
 
   const [form, setForm] = useState({
@@ -41,8 +41,7 @@ export default function Signup() {
       const user = await CredentialSignUp(form);
 
       setUser(user);
-      router.push("/");
-      window.location.href = "/";
+      router.replace("/")
     } catch (err: any) {
       setError(err.message || "Signup failed");
     } finally {
@@ -76,8 +75,7 @@ export default function Signup() {
       const user = await oauthSignUpUser(googleToken, username);
 
       setUser(user);
-      router.push("/");
-      window.location.href = "/";
+      router.replace("/");
     } catch (err: any) {
       setError(err.message || "Something went wrong");
     } finally {
@@ -217,7 +215,7 @@ export default function Signup() {
         <p className="text-zinc-400 text-sm">
           Already have an account?{" "}
           <span
-            onClick={() => router.push("/signin")}
+            onClick={() => router.replace("/signin")}
             className="text-green-400 cursor-pointer"
           >
             Sign In

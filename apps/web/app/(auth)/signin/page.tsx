@@ -3,8 +3,8 @@
 import { GoogleLogin } from "@react-oauth/google";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { CredentialSignIn, oauthSignIn } from "@/services/auth/service";
 import { useAuth } from "@/app/AuthProvider";
 
@@ -15,7 +15,8 @@ type SigninModel = {
 
 export default function Login() {
   const { setUser } = useAuth();
-
+  const router = useRouter();
+  const pathname = usePathname();
   const [details, setDetails] = useState<SigninModel>({
     username: "",
     password: "",
@@ -23,8 +24,6 @@ export default function Login() {
 
   const [credError, setCredError] = useState<string | null>(null);
   const [oauthError, setOauthError] = useState<string | null>(null);
-
-  const router = useRouter();
 
   const handleLogin = async () => {
     try {
@@ -34,7 +33,7 @@ export default function Login() {
 
       setUser(user);
 
-      window.location.replace("/");
+      router.replace("/");
     } catch (err: any) {
       setOauthError(null);
       setCredError(err.message);
@@ -51,13 +50,12 @@ export default function Login() {
 
       setUser(user);
 
-      window.location.replace("/");
+      router.replace("/");
     } catch (err: any) {
       setCredError(null);
       setOauthError(err.message);
     }
   };
-
   return (
     <div className="flex lg:h-screen lg:w-screen bg-black auth">
       <div className="lg:flex flex-1 hidden h-full ">
@@ -79,6 +77,11 @@ export default function Login() {
             className="w-40 h-auto"
           />
 
+          {credError && (
+            <p className="text-red-500 text-sm w-full text-center">
+              {credError}
+            </p>
+          )}
           <input
             type="text"
             placeholder="Email or username"
@@ -107,18 +110,17 @@ export default function Login() {
             Continue
           </motion.button>
 
-          {credError && (
-            <p className="text-red-500 text-sm w-full text-center">
-              {credError}
-            </p>
-          )}
-
           <div className="w-full flex items-center gap-2">
             <div className="flex-1 h-[1px] bg-zinc-600" />
             <span className="text-zinc-400 text-sm">or</span>
             <div className="flex-1 h-[1px] bg-zinc-600" />
           </div>
 
+          {oauthError && (
+            <p className="text-red-500 text-sm w-full text-center">
+              {oauthError}
+            </p>
+          )}
           <GoogleLogin
             onSuccess={handleOauthSignin}
             onError={() => setOauthError("Google login failed")}
@@ -127,16 +129,10 @@ export default function Login() {
             shape="circle"
           />
 
-          {oauthError && (
-            <p className="text-red-500 text-sm w-full text-center">
-              {oauthError}
-            </p>
-          )}
-
           <p className="text-zinc-400 text-sm">
             Don’t have an account?{" "}
             <span
-              onClick={() => router.push("/signup")}
+              onClick={() => router.replace("/signup")}
               className="text-green-400 cursor-pointer"
             >
               Sign up
