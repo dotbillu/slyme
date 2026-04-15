@@ -2,15 +2,12 @@
 
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { useAuth } from "../AuthProvider";
+import { UserPublic } from "@/types/user";
 
 type Tab = "recent" | "gigs" | "rooms";
 
-export default function Profile() {
-  const { user } = useAuth();
+export default function ProfileClient({ user }: { user: UserPublic }) {
   const [tab, setTab] = useState<Tab>("recent");
-
-  if (!user) return null;
 
   return (
     <div className="w-full min-h-screen bg-black text-white">
@@ -30,15 +27,12 @@ export default function Profile() {
               <img
                 src={user.avatarUrl}
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
               />
             )}
           </div>
 
           <h1 className="text-lg font-semibold tracking-tight">
-            {user.username || user.name || "user"}
+            {user.username || user.name}
           </h1>
 
           <p className="text-sm text-zinc-500 mt-1">
@@ -46,7 +40,7 @@ export default function Profile() {
           </p>
 
           <p className="text-xs text-zinc-600 mt-1">
-            joined {new Date(user.createdAt).getFullYear()}
+            {user.gigs.length} gigs • {user.rooms.length} rooms
           </p>
         </div>
 
@@ -78,37 +72,60 @@ export default function Profile() {
           className="space-y-6 pb-20"
         >
           {tab === "recent" &&
-            [...Array(4)].map((_, i) => (
-              <div key={i} className="space-y-1">
-                <p className="text-xs text-zinc-600">posted a gig • 2d ago</p>
-                <p className="text-sm text-white">
-                  Need frontend dev for landing page
-                </p>
-              </div>
-            ))}
+            [...user.gigs]
+              .sort(
+                (a, b) =>
+                  new Date(b.createdAt).getTime() -
+                  new Date(a.createdAt).getTime()
+              )
+              .slice(0, 5)
+              .map((gig) => (
+                <div key={gig.id} className="space-y-1">
+                  <p className="text-xs text-zinc-600">
+                    posted a gig •{" "}
+                    {new Date(gig.createdAt).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-white">{gig.title}</p>
+                </div>
+              ))}
 
           {tab === "gigs" &&
-            [...Array(4)].map((_, i) => (
-              <div key={i} className="space-y-2">
+            user.gigs.map((gig) => (
+              <div key={gig.id} className="space-y-2">
                 <div className="flex justify-between">
-                  <h3 className="text-sm font-medium">Build landing page</h3>
-                  <span className="text-sm text-white/80">₹2,500</span>
+                  <h3 className="text-sm font-medium">{gig.title}</h3>
+                  {gig.reward && (
+                    <span className="text-sm text-white/80">{gig.reward}</span>
+                  )}
                 </div>
-                <p className="text-xs text-zinc-500">
-                  clean responsive UI, fast turnaround
+
+                {gig.description && (
+                  <p className="text-xs text-zinc-500">{gig.description}</p>
+                )}
+
+                <p className="text-xs text-zinc-600">
+                  {gig.date
+                    ? new Date(gig.date).toLocaleDateString()
+                    : "no date"}
                 </p>
-                <p className="text-xs text-zinc-600">Delhi • 2 days left</p>
               </div>
             ))}
 
           {tab === "rooms" &&
-            [...Array(4)].map((_, i) => (
-              <div key={i} className="flex justify-between items-center">
+            user.rooms.map((room) => (
+              <div key={room.id} className="flex justify-between items-center">
                 <div>
-                  <p className="text-sm font-medium">Late Night Builders</p>
-                  <p className="text-xs text-zinc-500">12 members</p>
+                  <p className="text-sm font-medium">{room.name}</p>
+                  {room.description && (
+                    <p className="text-xs text-zinc-500">
+                      {room.description}
+                    </p>
+                  )}
                 </div>
-                <span className="text-xs text-zinc-600">active</span>
+
+                {room.type && (
+                  <span className="text-xs text-zinc-600">{room.type}</span>
+                )}
               </div>
             ))}
         </motion.div>
