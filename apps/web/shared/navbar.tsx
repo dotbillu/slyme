@@ -30,7 +30,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <>
+    <div>
       <motion.nav
         onHoverStart={() => setOpen(true)}
         onHoverEnd={() => setOpen(false)}
@@ -108,6 +108,6 @@ export default function Navbar() {
           })}
         </div>
       </nav>
-    </>
+    </div>
   );
 }

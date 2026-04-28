@@ -2,7 +2,8 @@ import { Metadata } from "next";
 import "./globals.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "./AuthProvider";
-import Navbar from "@/shared/navbar";
+import Script from "next/script";
+import ClientNavbar from "@/shared/clients/navbarClient";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -17,24 +18,27 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(){
-                var n=performance.getEntriesByType("navigation");
-                if(n.length&&n[0].type==="back_forward"){window.location.reload();return}
-                window.addEventListener("pageshow",function(e){if(e.persisted)window.location.reload()})
-              })()
-            `,
-          }}
-        />
+        <Script id="bfcache-fix" strategy="beforeInteractive">
+          {`
+      (function(){
+        var n=performance.getEntriesByType("navigation");
+        if(n.length&&n[0].type==="back_forward"){
+          window.location.reload();
+          return;
+        }
+        window.addEventListener("pageshow",function(e){
+          if(e.persisted) window.location.reload();
+        });
+      })()
+    `}
+        </Script>
       </head>
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           <GoogleOAuthProvider
             clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}
           >
-            <Navbar />
+            <ClientNavbar />
             {children}
           </GoogleOAuthProvider>
         </AuthProvider>
