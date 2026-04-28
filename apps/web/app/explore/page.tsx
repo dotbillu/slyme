@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-const Map = dynamic(() => import("@/app/explore/Components/Map"), {
+const Map = dynamic(() => import("@/app/explore/components/Map"), {
   ssr: false,
 });
 
