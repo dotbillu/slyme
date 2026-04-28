@@ -38,3 +38,7 @@ button,
 .auth [role="input"] {
   border-radius: 20px;
 }
+
+nav {
+  z-index: 9999;
+}

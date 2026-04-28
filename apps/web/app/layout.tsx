@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import "./globals.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "./AuthProvider";
+import Navbar from "@/shared/navbar";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -33,6 +34,7 @@ export default function RootLayout({
           <GoogleOAuthProvider
             clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}
           >
+            <Navbar />
             {children}
           </GoogleOAuthProvider>
         </AuthProvider>
