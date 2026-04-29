@@ -3,8 +3,58 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { UserPublic } from "@/types/user";
+import { MapPin, Calendar, Award, Tag } from "lucide-react";
 
 type Tab = "recent" | "gigs" | "rooms";
+
+function formatDate(d: Date | string | null) {
+  if (!d) return "no date";
+  return new Date(d).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+  });
+}
+
+function GigCard({ gig }: { gig: UserPublic["gigs"][number] }) {
+  return (
+    <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition space-y-3">
+      {/* Image */}
+      {gig.imageUrls.length > 0 && (
+        <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-800">
+          <img src={gig.imageUrls[0]} alt={gig.title} className="w-full h-full object-cover" />
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="text-sm font-medium text-white leading-tight">{gig.title}</h3>
+        {gig.type && (
+          <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
+            {gig.type}
+          </span>
+        )}
+      </div>
+
+      {/* Description */}
+      {gig.description && (
+        <p className="text-xs text-zinc-500 line-clamp-2">{gig.description}</p>
+      )}
+
+      {/* Meta */}
+      <div className="flex flex-wrap items-center gap-3 text-[11px] text-zinc-500">
+        {gig.reward && (
+          <span className="flex items-center gap-1">
+            <Award size={11} className="text-green-400" />
+            {gig.reward}
+          </span>
+        )}
+        <span className="flex items-center gap-1">
+          <Calendar size={11} className="text-blue-400" />
+          {formatDate(gig.date)}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function ProfileClient({ user }: { user: UserPublic }) {
   const [tab, setTab] = useState<Tab>("recent");
@@ -16,6 +66,7 @@ export default function ProfileClient({ user }: { user: UserPublic }) {
           <img
             src={user.coverImageUrl}
             className="w-full h-full object-cover opacity-80"
+            alt=""
           />
         )}
       </div>
@@ -27,6 +78,7 @@ export default function ProfileClient({ user }: { user: UserPublic }) {
               <img
                 src={user.avatarUrl}
                 className="w-full h-full object-cover"
+                alt=""
               />
             )}
           </div>
@@ -69,65 +121,63 @@ export default function ProfileClient({ user }: { user: UserPublic }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.15 }}
-          className="space-y-6 pb-20"
+          className="pb-20"
         >
-          {tab === "recent" &&
-            [...user.gigs]
-              .sort(
-                (a, b) =>
-                  new Date(b.createdAt).getTime() -
-                  new Date(a.createdAt).getTime()
-              )
-              .slice(0, 5)
-              .map((gig) => (
-                <div key={gig.id} className="space-y-1">
-                  <p className="text-xs text-zinc-600">
-                    posted a gig •{" "}
-                    {new Date(gig.createdAt).toLocaleDateString()}
-                  </p>
-                  <p className="text-sm text-white">{gig.title}</p>
+          {tab === "recent" && (
+            <div className="space-y-4">
+              {[...user.gigs]
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .slice(0, 5)
+                .map((gig) => (
+                  <div key={gig.id} className="space-y-1">
+                    <p className="text-xs text-zinc-600">
+                      posted a gig • {formatDate(gig.createdAt)}
+                    </p>
+                    <p className="text-sm text-white">{gig.title}</p>
+                    {gig.reward && (
+                      <p className="text-xs text-green-400">{gig.reward}</p>
+                    )}
+                  </div>
+                ))}
+              {user.gigs.length === 0 && (
+                <p className="text-sm text-zinc-600">No activity yet</p>
+              )}
+            </div>
+          )}
+
+          {tab === "gigs" && (
+            <div className="space-y-3">
+              {user.gigs.length === 0 && (
+                <p className="text-sm text-zinc-600">No gigs yet</p>
+              )}
+              {user.gigs.map((gig) => (
+                <GigCard key={gig.id} gig={gig} />
+              ))}
+            </div>
+          )}
+
+          {tab === "rooms" && (
+            <div className="space-y-4">
+              {user.rooms.length === 0 && (
+                <p className="text-sm text-zinc-600">No rooms yet</p>
+              )}
+              {user.rooms.map((room) => (
+                <div key={room.id} className="flex justify-between items-center p-4 rounded-xl bg-zinc-900 border border-zinc-800">
+                  <div>
+                    <p className="text-sm font-medium">{room.name}</p>
+                    {room.description && (
+                      <p className="text-xs text-zinc-500 mt-1">{room.description}</p>
+                    )}
+                  </div>
+                  {room.type && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
+                      {room.type}
+                    </span>
+                  )}
                 </div>
               ))}
-
-          {tab === "gigs" &&
-            user.gigs.map((gig) => (
-              <div key={gig.id} className="space-y-2">
-                <div className="flex justify-between">
-                  <h3 className="text-sm font-medium">{gig.title}</h3>
-                  {gig.reward && (
-                    <span className="text-sm text-white/80">{gig.reward}</span>
-                  )}
-                </div>
-
-                {gig.description && (
-                  <p className="text-xs text-zinc-500">{gig.description}</p>
-                )}
-
-                <p className="text-xs text-zinc-600">
-                  {gig.date
-                    ? new Date(gig.date).toLocaleDateString()
-                    : "no date"}
-                </p>
-              </div>
-            ))}
-
-          {tab === "rooms" &&
-            user.rooms.map((room) => (
-              <div key={room.id} className="flex justify-between items-center">
-                <div>
-                  <p className="text-sm font-medium">{room.name}</p>
-                  {room.description && (
-                    <p className="text-xs text-zinc-500">
-                      {room.description}
-                    </p>
-                  )}
-                </div>
-
-                {room.type && (
-                  <span className="text-xs text-zinc-600">{room.type}</span>
-                )}
-              </div>
-            ))}
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

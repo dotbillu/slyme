@@ -10,7 +10,7 @@ import {
 
 const router = Router();
 
-router.post("/create", requireAuth, async (req, res) => {
+router.post("/", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).userId;
 
