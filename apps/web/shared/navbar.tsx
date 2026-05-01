@@ -10,6 +10,7 @@ import {
   Heart,
   Search,
   Menu,
+  User,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -19,10 +20,10 @@ import { usePathname } from "next/navigation";
 const items: NavItem[] = [
   { href: "/", icon: Home },
   { href: "/explore", icon: Compass },
+  { href: "/search", icon: Search },
   { href: "/reels", icon: PlaySquare },
   { href: "/create", icon: Plus },
-  { href: "/activity", icon: Heart },
-  { href: "/search", icon: Search },
+  { href: "/profile", icon: User },
 ];
 
 export default function Navbar() {
@@ -37,7 +38,7 @@ export default function Navbar() {
         initial={{ width: 0 }}
         animate={{ width: 70 }}
         whileHover={{ width: 220 }}
-        className="hidden md:flex fixed  top-0 left-0 h-screen flex-col py-6 bg-black"
+        className="hidden md:flex fixed top-0 left-0 h-screen flex-col py-6 bg-black"
       >
         <Image
           src="/slymelogo.png"
