@@ -16,24 +16,29 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-
-const items: NavItem[] = [
-  { name: "Home", href: "/", icon: Home },
-  { name: "Explore", href: "/explore", icon: Compass },
-  { name: "Search", href: "/search", icon: Search },
-  { name: "Create", href: "/create", icon: Plus },
-  { name: "Profile", href: "/profile", icon: User },
-];
+import { useAuth } from "@/app/AuthProvider";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { user } = useAuth();
+  if (!user) return <></>;
 
+  const items: NavItem[] = [
+    { name: "Home", href: "/", icon: Home },
+    { name: "Explore", href: "/explore", icon: Compass },
+    { name: "Search", href: "/search", icon: Search },
+    { name: "Create", href: "/create", icon: Plus },
+    { name: "Profile", href: `/${user.username}`, icon: User },
+  ];
   return (
     <div>
       <motion.nav
         onHoverStart={() => setOpen(true)}
         onHoverEnd={() => setOpen(false)}
+        transition={{
+          duration: 0.25,
+        }}
         initial={{ width: 0 }}
         animate={{ width: 70 }}
         whileHover={{ width: 220 }}
@@ -58,7 +63,11 @@ export default function Navbar() {
                 href={i.href}
                 className={`flex items-center gap-4 px-3 py-2 rounded-xl transition hover:bg-white/30`}
               >
-                <Icon size={26} strokeWidth={isActive ? 2.5 : 1.3} />
+                <Icon
+                  size={26}
+                  strokeWidth={isActive ? 2.5 : 1.3}
+                  className="min-w-6.5 max-w-6.5"
+                />
 
                 <motion.span
                   className={`text-sm absolute ml-10 ${isActive ? "font-bold" : ""}`}
@@ -77,7 +86,7 @@ export default function Navbar() {
             onClick={() => setOpen((p) => !p)}
             className="flex items-center gap-4 px-3 py-2 text-zinc-400 hover:text-white w-full hover:bg-white/30 rounded-xl"
           >
-            <Menu size={26} />
+            <Menu size={26} className="min-w-6.5 max-w-6.5" />
             <motion.span
               className="text-sm absolute ml-10"
               initial={{ x: -100, opacity: 0 }}
