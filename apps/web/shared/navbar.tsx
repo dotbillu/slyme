@@ -18,12 +18,11 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 
 const items: NavItem[] = [
-  { href: "/", icon: Home },
-  { href: "/explore", icon: Compass },
-  { href: "/search", icon: Search },
-  { href: "/reels", icon: PlaySquare },
-  { href: "/create", icon: Plus },
-  { href: "/profile", icon: User },
+  { name: "Home", href: "/", icon: Home },
+  { name: "Explore", href: "/explore", icon: Compass },
+  { name: "Search", href: "/search", icon: Search },
+  { name: "Create", href: "/create", icon: Plus },
+  { name: "Profile", href: "/profile", icon: User },
 ];
 
 export default function Navbar() {
@@ -66,8 +65,7 @@ export default function Navbar() {
                   initial={{ x: -100, opacity: 0 }}
                   animate={{ x: open ? 0 : -10, opacity: open ? 1 : 0 }}
                 >
-                  {(i.href.slice(1) || "home").charAt(0).toUpperCase() +
-                    (i.href.slice(1) || "home").slice(1)}
+                  {i.name}
                 </motion.span>
               </Link>
             );
