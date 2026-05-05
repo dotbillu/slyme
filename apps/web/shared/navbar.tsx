@@ -11,6 +11,7 @@ import {
   Search,
   Menu,
   User,
+  MessageCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -29,6 +30,7 @@ export default function Navbar() {
     { name: "Explore", href: "/explore", icon: Compass },
     { name: "Search", href: "/search", icon: Search },
     { name: "Create", href: "/create", icon: Plus },
+    { name: "Messages", href: "/inbox", icon: MessageCircle },
     { name: "Profile", href: `/${user.username}`, icon: User },
   ];
   return (
