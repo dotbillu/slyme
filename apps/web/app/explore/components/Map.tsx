@@ -117,8 +117,16 @@ function FlyToLocation({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
-function LocationPickerEvents({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
-  useMapEvents({ click(e) { onLocationSelect(e.latlng.lat, e.latlng.lng); } });
+function LocationPickerEvents({
+  onLocationSelect,
+}: {
+  onLocationSelect: (lat: number, lng: number) => void;
+}) {
+  useMapEvents({
+    click(e) {
+      onLocationSelect(e.latlng.lat, e.latlng.lng);
+    },
+  });
   return null;
 }
 
@@ -158,8 +166,16 @@ const pickerIcon = L.divIcon({
 });
 
 const Map = forwardRef<MapHandle, MapProps>(function Map(
-  { userLocation, avatarUrl, gigs, onGigClick, locationPickerMode, pickedLocation, onLocationSelect },
-  ref
+  {
+    userLocation,
+    avatarUrl,
+    gigs,
+    onGigClick,
+    locationPickerMode,
+    pickedLocation,
+    onLocationSelect,
+  },
+  ref,
 ) {
   const [mapReady, setMapReady] = useState(false);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
@@ -183,21 +199,26 @@ const Map = forwardRef<MapHandle, MapProps>(function Map(
       scrollWheelZoom={false}
       zoomControl={false}
       style={{ height: "100%", width: "100%" }}
-      ref={(map) => { if (map) setMapInstance(map); }}
+      ref={(map) => {
+        if (map) setMapInstance(map);
+      }}
       whenReady={() => setMapReady(true)}
     >
       <CtrlWheelZoom />
 
       <TileLayer
         attribution="&copy; OpenStreetMap contributors"
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        // url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
       />
 
       {userLocation && mapReady && (
         <>
           <FlyToLocation lat={userLocation.lat} lng={userLocation.lng} />
           <Marker position={[userLocation.lat, userLocation.lng]} icon={icon}>
-            <Popup><span style={{ color: "#000" }}>You are here</span></Popup>
+            <Popup>
+              <span style={{ color: "#000" }}>You are here</span>
+            </Popup>
           </Marker>
         </>
       )}
@@ -218,7 +239,11 @@ const Map = forwardRef<MapHandle, MapProps>(function Map(
             <Popup>
               <div style={{ color: "#000", maxWidth: 180 }}>
                 <strong style={{ fontSize: 13 }}>{gig.title}</strong>
-                {gig.reward && <p style={{ fontSize: 11, margin: "4px 0 0" }}>{gig.reward}</p>}
+                {gig.reward && (
+                  <p style={{ fontSize: 11, margin: "4px 0 0" }}>
+                    {gig.reward}
+                  </p>
+                )}
                 {gig.createdBy && (
                   <p style={{ fontSize: 10, color: "#666", margin: "4px 0 0" }}>
                     by {gig.createdBy.username || gig.createdBy.name}
@@ -235,8 +260,13 @@ const Map = forwardRef<MapHandle, MapProps>(function Map(
       )}
 
       {pickedLocation && (
-        <Marker position={[pickedLocation.lat, pickedLocation.lng]} icon={pickerIcon}>
-          <Popup><span style={{ color: "#000" }}>Gig location</span></Popup>
+        <Marker
+          position={[pickedLocation.lat, pickedLocation.lng]}
+          icon={pickerIcon}
+        >
+          <Popup>
+            <span style={{ color: "#000" }}>Gig location</span>
+          </Popup>
         </Marker>
       )}
     </MapContainer>
