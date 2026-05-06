@@ -199,5 +199,63 @@ export async function joinRoom(roomId: string, userId: string) {
         connect: { id: userId },
       },
     },
+    include: {
+      members: true,
+      createdBy: true,
+    },
+  })
+}
+
+export async function getAllRooms() {
+  return prisma.mapRoom.findMany({
+    include: {
+      createdBy: true,
+      members: true,
+      _count: {
+        select: { members: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  })
+}
+
+export async function getRoomById(roomId: string) {
+  return prisma.mapRoom.findUnique({
+    where: { id: roomId },
+    include: {
+      createdBy: true,
+      members: true,
+      groupMessages: {
+        orderBy: { createdAt: "asc" },
+        take: 50,
+        include: {
+          sender: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      },
+    },
+  })
+}
+
+export async function getRoomMessages(roomId: string, skip = 0, take = 50) {
+  return prisma.groupMessage.findMany({
+    where: { roomId },
+    orderBy: { createdAt: "asc" },
+    skip,
+    take,
+    include: {
+      sender: {
+        select: {
+          id: true,
+          username: true,
+          avatarUrl: true,
+        },
+      },
+    },
   })
 }

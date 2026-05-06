@@ -4,20 +4,45 @@ import { PrismaClient } from "@prisma/client"
 const prisma = new PrismaClient()
 
 export const registerChatHandlers = (io: Server, socket: Socket) => {
+  const userId = socket.data.userId
+
   socket.on("join_room", async (roomId: string) => {
     if (!roomId) return
 
     socket.join(roomId)
+
+    // Send recent messages to the user who just joined
+    const messages = await prisma.groupMessage.findMany({
+      where: { roomId },
+      orderBy: { createdAt: "asc" },
+      take: 50,
+      include: {
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    })
+
+    socket.emit("room_messages", { roomId, messages })
   })
 
-  socket.on("send_message", async ({ roomId, content, senderId }) => {
-    if (!roomId || !content || !senderId) return
+  socket.on("leave_room", (roomId: string) => {
+    if (!roomId) return
+    socket.leave(roomId)
+  })
+
+  socket.on("send_message", async ({ roomId, content }) => {
+    if (!roomId || !content || !userId) return
 
     const message = await prisma.groupMessage.create({
       data: {
         content,
         roomId,
-        senderId,
+        senderId: userId,
       },
       include: {
         sender: {
@@ -31,5 +56,15 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
     })
 
     io.to(roomId).emit("receive_message", message)
+  })
+
+  socket.on("typing", ({ roomId }) => {
+    if (!roomId || !userId) return
+    socket.to(roomId).emit("user_typing", { roomId, userId })
+  })
+
+  socket.on("stop_typing", ({ roomId }) => {
+    if (!roomId || !userId) return
+    socket.to(roomId).emit("user_stop_typing", { roomId, userId })
   })
 }

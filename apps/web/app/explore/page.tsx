@@ -2,105 +2,101 @@
 
 import dynamic from "next/dynamic";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { X, Users, LogIn } from "lucide-react";
 import { useAuth } from "@/app/AuthProvider";
 import { Gig } from "@/types/gig";
+import { Room } from "@/types/room";
 import { fetchAllGigs } from "@/services/gig/service";
+import { fetchAllRooms, joinRoom } from "@/services/room/service";
 
 const Map = dynamic(() => import("@/app/explore/components/Map"), { ssr: false });
-const CreateGigForm = dynamic(() => import("@/app/explore/components/CreateGigForm"), { ssr: false });
-const LocationPicker = dynamic(() => import("@/app/explore/components/LocationPicker"), { ssr: false });
 const GigDetail = dynamic(() => import("@/app/explore/components/GigDetail"), { ssr: false });
-
-type View = "map" | "form" | "locationPicker";
 
 export default function ExplorePage() {
   const { user } = useAuth();
-  const [view, setView] = useState<View>("map");
+  const router = useRouter();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [currentLocationName, setCurrentLocationName] = useState("");
-  const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [pickedLocationName, setPickedLocationName] = useState("");
 
   // Gigs state
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
+
+  // Rooms state
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [joining, setJoining] = useState(false);
 
   // Fetch all gigs
   const loadGigs = useCallback(async () => {
     try {
       const data = await fetchAllGigs();
       setGigs(data);
-    } catch {
-      // silently fail — map just won't show gigs
-    }
+    } catch {}
   }, []);
 
-  useEffect(() => { loadGigs(); }, [loadGigs]);
+  // Fetch all rooms
+  const loadRooms = useCallback(async () => {
+    try {
+      const data = await fetchAllRooms();
+      setRooms(data);
+    } catch {}
+  }, []);
+
+  useEffect(() => { loadGigs(); loadRooms(); }, [loadGigs, loadRooms]);
 
   // Geolocation
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setUserLocation(loc);
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}&zoom=18`
-          );
-          const data = await res.json();
-          if (data.display_name) setCurrentLocationName(data.display_name);
-        } catch {
-          setCurrentLocationName(`${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`);
-        }
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       },
       () => {
         setUserLocation({ lat: 51.505, lng: -0.09 });
-        setCurrentLocationName("London, UK");
       },
       { enableHighAccuracy: true }
     );
   }, []);
 
-  const handleOpenForm = useCallback(() => setView("form"), []);
-
-  const handleCloseForm = useCallback(() => {
-    setView("map");
-    setPickedLocation(null);
-    setPickedLocationName("");
-    loadGigs(); // refresh gigs after creating
-  }, [loadGigs]);
-
-  const handleOpenLocationPicker = useCallback(() => setView("locationPicker"), []);
-
-  const handleLocationConfirm = useCallback((lat: number, lng: number, name: string) => {
-    setPickedLocation({ lat, lng });
-    setPickedLocationName(name);
-    setView("form");
-  }, []);
-
-  const handleLocationPickerBack = useCallback(() => setView("form"), []);
-
-  // Gig detail handlers
-  const handleGigClick = useCallback((gig: Gig) => {
-    setSelectedGig(gig);
-  }, []);
-
-  const handleGigClose = useCallback(() => {
-    setSelectedGig(null);
-  }, []);
-
+  // Gig handlers
+  const handleGigClick = useCallback((gig: Gig) => setSelectedGig(gig), []);
+  const handleGigClose = useCallback(() => setSelectedGig(null), []);
   const handleGigUpdated = useCallback((updated: Gig) => {
     setGigs((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
     setSelectedGig(updated);
   }, []);
-
   const handleGigDeleted = useCallback((id: string) => {
     setGigs((prev) => prev.filter((g) => g.id !== id));
     setSelectedGig(null);
   }, []);
+
+  // Room handlers
+  const handleRoomClick = useCallback((room: Room) => {
+    setSelectedRoom(room);
+  }, []);
+
+  const handleRoomClose = useCallback(() => {
+    setSelectedRoom(null);
+  }, []);
+
+  const handleJoinRoom = useCallback(async () => {
+    if (!selectedRoom) return;
+    setJoining(true);
+    try {
+      if (user) {
+        const isMember = selectedRoom.members?.some((m) => m.id === user.id);
+        if (!isMember) {
+          await joinRoom(selectedRoom.id);
+        }
+      }
+      router.push(`/network/${selectedRoom.id}`);
+    } catch {
+      // failed
+      setJoining(false);
+    }
+  }, [selectedRoom, user, router]);
 
   const avatarUrl = user?.avatarUrl || null;
   const isOwner = (gig: Gig) => !!user && gig.creatorId === user.id;
@@ -113,24 +109,11 @@ export default function ExplorePage() {
           userLocation={userLocation}
           avatarUrl={avatarUrl}
           gigs={gigs}
+          rooms={rooms}
           onGigClick={handleGigClick}
+          onRoomClick={handleRoomClick}
         />
       </div>
-
-      {/* Create Gig FAB */}
-      {view === "map" && !selectedGig && (
-        <motion.button
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={handleOpenForm}
-          className="fixed bottom-24 right-6 md:bottom-8 md:right-8 z-[997] w-14 h-14 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30 transition-colors"
-          aria-label="Create a gig"
-        >
-          <Plus size={24} className="text-white" />
-        </motion.button>
-      )}
 
       {/* Gig detail sidebar / fullscreen */}
       <AnimatePresence>
@@ -146,34 +129,115 @@ export default function ExplorePage() {
         )}
       </AnimatePresence>
 
-      {/* Form overlay — keep mounted during location picker so form state persists */}
+      {/* Room detail modal */}
       <AnimatePresence>
-        {(view === "form" || view === "locationPicker") && (
-          <div className={view === "locationPicker" ? "hidden" : ""}>
-            <CreateGigForm
-              onClose={handleCloseForm}
-              currentLocation={userLocation}
-              currentLocationName={currentLocationName}
-              onOpenLocationPicker={handleOpenLocationPicker}
-              pickedLocation={pickedLocation}
-              pickedLocationName={pickedLocationName}
-            />
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Location picker overlay */}
-      <AnimatePresence>
-        {view === "locationPicker" && (
-          <LocationPicker
-            currentLocation={userLocation}
-            avatarUrl={avatarUrl}
-            onConfirm={handleLocationConfirm}
-            onBack={handleLocationPickerBack}
-            initialPicked={pickedLocation}
+        {selectedRoom && (
+          <RoomModal
+            room={selectedRoom}
+            onClose={handleRoomClose}
+            onJoin={handleJoinRoom}
+            joining={joining}
           />
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/* ─── Room Modal ─── */
+function RoomModal({
+  room,
+  onClose,
+  onJoin,
+  joining,
+}: {
+  room: Room;
+  onClose: () => void;
+  onJoin: () => void;
+  joining: boolean;
+}) {
+  const memberCount = room._count?.members || room.members?.length || 0;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[998] bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="fixed z-[999] inset-x-4 top-1/2 -translate-y-1/2 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[360px] bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl"
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 p-1.5 rounded-full bg-zinc-800/80 hover:bg-zinc-700 transition z-10"
+        >
+          <X size={18} className="text-zinc-300" />
+        </button>
+
+        {/* Room image / gradient header */}
+        <div className="h-32 relative overflow-hidden">
+          {room.imageUrl ? (
+            <img
+              src={room.imageUrl}
+              alt={room.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center">
+              <span className="text-4xl font-bold text-white/80">
+                {room.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
+          {/* Gradient overlay at bottom */}
+          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-zinc-900 to-transparent" />
+        </div>
+
+        {/* Content */}
+        <div className="px-5 pb-5 -mt-2 relative">
+          <h2 className="text-lg font-semibold text-white mb-1">{room.name}</h2>
+
+          {room.description && (
+            <p className="text-sm text-zinc-400 mb-3 line-clamp-3">
+              {room.description}
+            </p>
+          )}
+
+          {/* Members */}
+          <div className="flex items-center gap-2 text-zinc-400 text-sm mb-5">
+            <Users size={16} />
+            <span>{memberCount} {memberCount === 1 ? "member" : "members"}</span>
+          </div>
+
+          {/* Join button */}
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onJoin}
+            disabled={joining}
+            className="w-full py-3 rounded-xl bg-purple-500 hover:bg-purple-600 text-white font-semibold text-sm flex items-center justify-center gap-2 transition disabled:opacity-50"
+          >
+            {joining ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                <LogIn size={16} />
+                Join Room
+              </>
+            )}
+          </motion.button>
+        </div>
+      </motion.div>
+    </>
   );
 }
