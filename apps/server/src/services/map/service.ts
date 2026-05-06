@@ -111,3 +111,93 @@ export async function deleteGig(gigId: string, userId: string) {
     where: { id: gigId },
   });
 }
+
+
+
+export async function createRoom(data: {
+  userId: string
+  name: string
+  description?: string
+  latitude: number
+  longitude: number
+  type?: string
+  imageUrl?: string
+}) {
+  return prisma.mapRoom.create({
+    data: {
+      name: data.name,
+      description: data.description,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      type: data.type,
+      imageUrl: data.imageUrl,
+      creatorId: data.userId,
+      members: {
+        connect: { id: data.userId },
+      },
+    },
+    include: {
+      members: true,
+      createdBy: true,
+    },
+  })
+}
+
+export async function getUserRooms(userId: string) {
+  return prisma.mapRoom.findMany({
+    where: {
+      members: {
+        some: { id: userId },
+      },
+    },
+    include: {
+      createdBy: true,
+      members: true,
+    },
+    orderBy: { createdAt: "desc" },
+  })
+}
+
+export async function updateRoom(
+  roomId: string,
+  userId: string,
+  data: any,
+) {
+  const room = await prisma.mapRoom.findUnique({
+    where: { id: roomId },
+  })
+
+  if (!room || room.creatorId !== userId) {
+    throw new Error("Not allowed")
+  }
+
+  return prisma.mapRoom.update({
+    where: { id: roomId },
+    data,
+  })
+}
+
+export async function deleteRoom(roomId: string, userId: string) {
+  const room = await prisma.mapRoom.findUnique({
+    where: { id: roomId },
+  })
+
+  if (!room || room.creatorId !== userId) {
+    throw new Error("Not allowed")
+  }
+
+  return prisma.mapRoom.delete({
+    where: { id: roomId },
+  })
+}
+
+export async function joinRoom(roomId: string, userId: string) {
+  return prisma.mapRoom.update({
+    where: { id: roomId },
+    data: {
+      members: {
+        connect: { id: userId },
+      },
+    },
+  })
+}
