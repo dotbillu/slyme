@@ -44,14 +44,14 @@ export default function Navbar() {
         initial={{ width: 0 }}
         animate={{ width: 70 }}
         whileHover={{ width: 220 }}
-        className="hidden md:flex fixed top-0 left-0 h-screen flex-col py-6 bg-black"
+        className="hidden md:flex fixed top-0 left-0 h-screen min-h-full flex-col py-6 bg-black"
       >
         <Image
           src="/slymelogo.png"
           alt="logo"
           width={30}
           height={30}
-          className="absolute ml-5"
+          className="absolute ml-5 flex-1"
         />
 
         <div className="flex flex-col gap-3 px-3 flex-1 justify-center">
