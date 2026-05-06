@@ -30,7 +30,7 @@ export default function Navbar() {
     { name: "Explore", href: "/explore", icon: Compass },
     { name: "Search", href: "/search", icon: Search },
     { name: "Create", href: "/create", icon: Plus },
-    { name: "Messages", href: "/inbox", icon: MessageCircle },
+    { name: "Messages", href: "/network", icon: MessageCircle },
     { name: "Profile", href: `/${user.username}`, icon: User },
   ];
   return (

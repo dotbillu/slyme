@@ -26,6 +26,7 @@ model User {
   mapRooms MapRoom[] @relation("MapRoomCreator")
   gigs     Gig[]     @relation("GigCreator")
 
+  seenMessages MessageSeen[]
   groupMessages GroupMessage[] @relation("UserGroupMessages")
 }
 
@@ -82,5 +83,20 @@ model GroupMessage {
   room   MapRoom @relation("RoomGroupMessages", fields: [roomId], references: [id], onDelete: Cascade)
   roomId String
 
-  @@index([roomId])
+  seenBy MessageSeen[]
+}
+
+model MessageSeen {
+  id String @id @default(uuid())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  message   GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId String
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, messageId])
+  @@index([messageId])
 }
