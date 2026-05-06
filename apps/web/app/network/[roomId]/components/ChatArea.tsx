@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Room, Message } from "@/types/room"
-import { Send, Menu, Users, Info } from "lucide-react"
+import { Send, Menu, Users, Info, User } from "lucide-react"
 
 interface ChatAreaProps {
   room: Room | null
@@ -109,17 +109,7 @@ export default function ChatArea({
                 <div className="w-7 flex-shrink-0">
                   {!isOwn && showAvatar ? (
                     <div className="w-7 h-7 rounded-full bg-zinc-700 overflow-hidden">
-                      {msg.sender.avatarUrl ? (
-                        <img
-                          src={msg.sender.avatarUrl}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-zinc-300">
-                          {msg.sender.username?.charAt(0)?.toUpperCase() || "?"}
-                        </div>
-                      )}
+                    <User/>
                     </div>
                   ) : null}
                 </div>
@@ -136,7 +126,7 @@ export default function ChatArea({
                 >
                   {!isOwn && showAvatar && (
                     <p className="text-[10px] text-zinc-400 mb-0.5 font-medium">
-                      {msg.sender.username || "user"}
+                        <User/>
                     </p>
                   )}
                   <p className="break-words">{msg.content}</p>
