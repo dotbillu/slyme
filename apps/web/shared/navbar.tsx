@@ -5,9 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Home,
   Compass,
-  PlaySquare,
   Plus,
-  Heart,
   Search,
   Menu,
   User,
@@ -19,15 +17,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useAtom } from "jotai";
 import { useAuth } from "@/app/AuthProvider";
+import { socket } from "@/lib/socket";
+import { unseenCountAtom } from "@/lib/atom";
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [unseenCount, setUnseenCount] = useAtom(unseenCountAtom);
   const { user } = useAuth();
   const createRef = useRef<HTMLDivElement>(null);
+  const socketInitRef = useRef(false);
 
   // Close create menu on outside click
   useEffect(() => {
@@ -46,6 +49,30 @@ export default function Navbar() {
   useEffect(() => {
     setCreateOpen(false);
   }, [pathname]);
+
+  // Socket connection for unseen count — navbar OWNS the socket lifecycle
+  useEffect(() => {
+    if (!user) return;
+    if (socketInitRef.current) return;
+
+    socket.auth = { userId: user.id };
+    socket.connect();
+    socketInitRef.current = true;
+
+    socket.on("unseen_count", ({ count }: { count: number }) => {
+      setUnseenCount(count);
+    });
+
+    socket.on("connect", () => {
+      socket.emit("get_unseen_count");
+    });
+
+    if (socket.connected) {
+      socket.emit("get_unseen_count");
+    }
+
+    // Never disconnect — navbar is always mounted
+  }, [user, setUnseenCount]);
 
   if (!user) return <></>;
 
@@ -69,9 +96,7 @@ export default function Navbar() {
       <motion.nav
         onHoverStart={() => setOpen(true)}
         onHoverEnd={() => setOpen(false)}
-        transition={{
-          duration: 0.25,
-        }}
+        transition={{ duration: 0.25 }}
         initial={{ width: 0 }}
         animate={{ width: 70 }}
         whileHover={{ width: 220 }}
@@ -88,9 +113,9 @@ export default function Navbar() {
         <div className="flex flex-col gap-3 px-3 flex-1 justify-center">
           {items.map((i, k) => {
             const Icon = i.icon;
-            const isActive = pathname === i.href;
+            const isActive = pathname === i.href || (i.name === "Messages" && pathname.startsWith("/network"));
 
-            // Create button — special handling
+            // Create button
             if (i.name === "Create") {
               return (
                 <div key={k} className="relative" ref={createRef}>
@@ -112,7 +137,6 @@ export default function Navbar() {
                     </motion.span>
                   </button>
 
-                  {/* Desktop popup — appears below the + button */}
                   <AnimatePresence>
                     {createOpen && (
                       <motion.div
@@ -144,18 +168,49 @@ export default function Navbar() {
               );
             }
 
+            // Messages button with badge
+            if (i.name === "Messages") {
+              return (
+                <Link
+                  key={k}
+                  href={i.href}
+                  className="relative flex items-center gap-4 px-3 py-2 rounded-xl transition hover:bg-white/30"
+                >
+                  <div className="relative min-w-6.5 max-w-6.5">
+                    <MessageCircle
+                      size={26}
+                      strokeWidth={isActive ? 2.5 : 1.3}
+                    />
+                    {unseenCount > 0 && (
+                      <div className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 bg-red-500 rounded-full flex items-center justify-center">
+                        <span className="text-[9px] font-bold text-white leading-none">
+                          {unseenCount > 99 ? "99+" : unseenCount}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <motion.span
+                    className={`text-sm absolute ml-10 ${isActive ? "font-bold" : ""}`}
+                    initial={{ x: -100, opacity: 0 }}
+                    animate={{ x: open ? 0 : -10, opacity: open ? 1 : 0 }}
+                  >
+                    Messages
+                  </motion.span>
+                </Link>
+              );
+            }
+
             return (
               <Link
                 key={k}
                 href={i.href}
-                className={`flex items-center gap-4 px-3 py-2 rounded-xl transition hover:bg-white/30`}
+                className="flex items-center gap-4 px-3 py-2 rounded-xl transition hover:bg-white/30"
               >
                 <Icon
                   size={26}
                   strokeWidth={isActive ? 2.5 : 1.3}
                   className="min-w-6.5 max-w-6.5"
                 />
-
                 <motion.span
                   className={`text-sm absolute ml-10 ${isActive ? "font-bold" : ""}`}
                   initial={{ x: -100, opacity: 0 }}
@@ -168,7 +223,7 @@ export default function Navbar() {
           })}
         </div>
 
-        <div className="px-3 ">
+        <div className="px-3">
           <button
             onClick={() => setOpen((p) => !p)}
             className="flex items-center gap-4 px-3 py-2 text-zinc-400 hover:text-white w-full hover:bg-white/30 rounded-xl"
@@ -190,9 +245,9 @@ export default function Navbar() {
         <div className="flex justify-around items-center h-16">
           {items.slice(0, 5).map((i, k) => {
             const Icon = i.icon;
-            const isActive = pathname === i.href;
+            const isActive = pathname === i.href || (i.name === "Messages" && pathname.startsWith("/network"));
 
-            // Create button — special handling for mobile
+            // Create button
             if (i.name === "Create") {
               return (
                 <div key={k} className="relative" ref={createRef}>
@@ -205,7 +260,6 @@ export default function Navbar() {
                     <Plus size={26} strokeWidth={createOpen ? 2 : 1} />
                   </button>
 
-                  {/* Mobile popup — appears above the + button */}
                   <AnimatePresence>
                     {createOpen && (
                       <motion.div
@@ -234,6 +288,28 @@ export default function Navbar() {
                     )}
                   </AnimatePresence>
                 </div>
+              );
+            }
+
+            // Messages button with badge
+            if (i.name === "Messages") {
+              return (
+                <Link
+                  key={k}
+                  href={i.href}
+                  className={`relative flex items-center justify-center ${
+                    isActive ? "text-white" : "text-zinc-400"
+                  }`}
+                >
+                  <MessageCircle size={26} strokeWidth={isActive ? 2 : 1} />
+                  {unseenCount > 0 && (
+                    <div className="absolute -top-1 -right-2 min-w-4 h-4 px-1 bg-red-500 rounded-full flex items-center justify-center">
+                      <span className="text-[9px] font-bold text-white leading-none">
+                        {unseenCount > 99 ? "99+" : unseenCount}
+                      </span>
+                    </div>
+                  )}
+                </Link>
               );
             }
 

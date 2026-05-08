@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { useAtom } from "jotai"
 import { useAuth } from "@/app/AuthProvider"
 import { socket } from "@/lib/socket"
 import { fetchUserRooms, fetchRoomMessages } from "@/services/room/service"
-import { Room, Message } from "@/types/room"
+import { roomsAtom, roomsLoadedAtom } from "@/lib/atom"
+import { Message } from "@/types/room"
 import RoomSidebar from "./components/RoomSidebar"
 import ChatArea from "./components/ChatArea"
 
@@ -14,7 +16,9 @@ export default function RoomChatPage() {
   const { user } = useAuth()
   const router = useRouter()
 
-  const [rooms, setRooms] = useState<Room[]>([])
+  const [rooms, setRooms] = useAtom(roomsAtom)
+  const [roomsLoaded, setRoomsLoaded] = useAtom(roomsLoadedAtom)
+
   const [messages, setMessages] = useState<Message[]>([])
   const [connected, setConnected] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -22,72 +26,66 @@ export default function RoomChatPage() {
   const [hasMore, setHasMore] = useState(true)
   const roomIdsRef = useRef<string[]>([])
   const activeRoomRef = useRef<string>(roomId)
-  const socketInitialized = useRef(false)
 
-  // Keep activeRoomRef in sync
   useEffect(() => {
     activeRoomRef.current = roomId
   }, [roomId])
 
-  // Load user rooms for sidebar
+  // Fetch rooms if not already loaded (e.g. direct navigation to /network/[id])
   useEffect(() => {
-    if (!user) return
+    if (!user || roomsLoaded) return
     fetchUserRooms()
       .then((data) => {
         setRooms(data)
         roomIdsRef.current = data.map((r) => r.id)
+        setRoomsLoaded(true)
       })
       .catch(() => {})
-  }, [user])
+  }, [user, roomsLoaded, setRooms, setRoomsLoaded])
 
-  // Socket connection — join ALL rooms
+  // Keep ref in sync
   useEffect(() => {
-    if (!user || !roomId) return
-    // Wait until rooms are loaded
-    if (roomIdsRef.current.length === 0) return
+    roomIdsRef.current = rooms.map((r) => r.id)
+  }, [rooms])
 
-    // Don't re-init if already running
-    if (socketInitialized.current && socket.connected) return
-
-    socket.auth = { userId: user.id }
-    socket.connect()
-    socketInitialized.current = true
+  // Socket — join ALL rooms, handle messages (socket managed by navbar)
+  useEffect(() => {
+    if (!user || !roomId || rooms.length === 0) return
 
     const joinAllRooms = () => {
-      roomIdsRef.current.forEach((rid) => {
-        socket.emit("join_room", rid)
-      })
+      roomIdsRef.current.forEach((rid) => socket.emit("join_room", rid))
     }
 
-    socket.on("connect", () => {
+    const handleConnect = () => {
       setConnected(true)
       joinAllRooms()
-    })
+      socket.emit("mark_seen", { roomId })
+      setRooms((prev) =>
+        prev.map((r) => (r.id === roomId ? { ...r, unreadCount: 0 } : r))
+      )
+    }
 
-    socket.on("connect_error", (err) => {
+    const handleConnectError = (err: Error) => {
       console.error("Socket connection error:", err.message)
       setConnected(false)
-    })
+    }
 
-    // Only set messages for the ACTIVE room
-    socket.on("room_messages", ({ roomId: rid, messages: msgs }) => {
+    const handleRoomMessages = ({ roomId: rid, messages: msgs }: { roomId: string; messages: Message[] }) => {
       if (rid === activeRoomRef.current) {
         setMessages(msgs)
         setHasMore(msgs.length >= 50)
         socket.emit("mark_seen", { roomId: rid })
       }
-    })
+    }
 
-    socket.on("receive_message", (msg: Message) => {
+    const handleReceiveMessage = (msg: Message) => {
       if (msg.roomId === activeRoomRef.current) {
-        // Active room — add to chat
         setMessages((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev
           return [...prev, msg]
         })
         socket.emit("mark_seen", { roomId: msg.roomId })
       } else {
-        // Other room — update sidebar unread + last message
         setRooms((prev) =>
           prev.map((room) => {
             if (room.id !== msg.roomId) return room
@@ -99,31 +97,37 @@ export default function RoomChatPage() {
           })
         )
       }
-    })
+    }
 
-    socket.on("disconnect", () => {
+    const handleDisconnect = () => {
       setConnected(false)
-    })
+    }
 
-    // If already connected
+    socket.on("connect", handleConnect)
+    socket.on("connect_error", handleConnectError)
+    socket.on("room_messages", handleRoomMessages)
+    socket.on("receive_message", handleReceiveMessage)
+    socket.on("disconnect", handleDisconnect)
+
+    // If already connected, join immediately
     if (socket.connected) {
       setConnected(true)
       joinAllRooms()
+      socket.emit("mark_seen", { roomId })
+      setRooms((prev) =>
+        prev.map((r) => (r.id === roomId ? { ...r, unreadCount: 0 } : r))
+      )
     }
 
     return () => {
-      roomIdsRef.current.forEach((rid) => {
-        socket.emit("leave_room", rid)
-      })
-      socket.off("connect")
-      socket.off("connect_error")
-      socket.off("room_messages")
-      socket.off("receive_message")
-      socket.off("disconnect")
-      socket.disconnect()
-      socketInitialized.current = false
+      roomIdsRef.current.forEach((rid) => socket.emit("leave_room", rid))
+      socket.off("connect", handleConnect)
+      socket.off("connect_error", handleConnectError)
+      socket.off("room_messages", handleRoomMessages)
+      socket.off("receive_message", handleReceiveMessage)
+      socket.off("disconnect", handleDisconnect)
     }
-  }, [user, roomId, rooms.length])
+  }, [user, roomId, rooms.length, setRooms])
 
   const sendMessage = useCallback(
     (content: string) => {
@@ -133,7 +137,6 @@ export default function RoomChatPage() {
     [roomId]
   )
 
-  // Load older messages (scroll up pagination)
   const loadOlderMessages = useCallback(async () => {
     if (loadingOlder || !hasMore || !roomId) return
     setLoadingOlder(true)
@@ -157,13 +160,12 @@ export default function RoomChatPage() {
       setMessages([])
       setHasMore(true)
       setSidebarOpen(false)
-      // Clear unread for the room we're opening
       setRooms((prev) =>
         prev.map((r) => (r.id === id ? { ...r, unreadCount: 0 } : r))
       )
       router.push(`/network/${id}`)
     },
-    [roomId, router]
+    [roomId, router, setRooms]
   )
 
   const currentRoom = rooms.find((r) => r.id === roomId)
@@ -171,7 +173,7 @@ export default function RoomChatPage() {
   if (!user) return null
 
   return (
-    <div className="flex h-screen bg-black text-white md:ml-[70px]">
+    <div className="flex h-[calc(100dvh-4rem)] md:h-screen bg-black text-white md:ml-[70px]">
       <RoomSidebar
         rooms={rooms}
         activeRoomId={roomId}

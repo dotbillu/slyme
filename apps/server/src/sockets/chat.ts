@@ -3,8 +3,44 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
+async function getUnseenCount(userId: string): Promise<number> {
+  return prisma.groupMessage.count({
+    where: {
+      room: {
+        members: { some: { id: userId } },
+      },
+      senderId: { not: userId },
+      seenBy: { none: { userId } },
+    },
+  })
+}
+
 export const registerChatHandlers = (io: Server, socket: Socket) => {
   const userId = socket.data.userId
+  let unseenInterval: NodeJS.Timeout | null = null
+
+  // Start pushing unseen count every 10 seconds
+  if (userId) {
+    const pushUnseenCount = async () => {
+      try {
+        const count = await getUnseenCount(userId)
+        socket.emit("unseen_count", { count })
+      } catch {}
+    }
+
+    pushUnseenCount()
+    console.log("sending count")
+    // unseenInterval = setInterval(pushUnseenCount, 10000)
+  }
+
+  // Client can also request it on demand
+  socket.on("get_unseen_count", async () => {
+    if (!userId) return
+    try {
+      const count = await getUnseenCount(userId)
+      socket.emit("unseen_count", { count })
+    } catch {}
+  })
 
   socket.on("join_room", async (roomId: string) => {
     if (!roomId) return
@@ -56,6 +92,26 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
     })
 
     io.to(roomId).emit("receive_message", message)
+
+    // Push updated unseen count to all OTHER members in the room
+    const room = await prisma.mapRoom.findUnique({
+      where: { id: roomId },
+      select: { members: { select: { id: true } } },
+    })
+
+    if (room) {
+      for (const member of room.members) {
+        if (member.id === userId) continue
+        const count = await getUnseenCount(member.id)
+        // Emit to all sockets of this user
+        const sockets = await io.fetchSockets()
+        for (const s of sockets) {
+          if (s.data.userId === member.id) {
+            s.emit("unseen_count", { count })
+          }
+        }
+      }
+    }
   })
 
   socket.on("mark_seen", async ({ roomId }) => {
@@ -82,6 +138,10 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
       }
 
       socket.emit("messages_marked_seen", { roomId })
+
+      // Push updated unseen count
+      const count = await getUnseenCount(userId)
+      socket.emit("unseen_count", { count })
     } catch {}
   })
 
@@ -93,5 +153,12 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
   socket.on("stop_typing", ({ roomId }) => {
     if (!roomId || !userId) return
     socket.to(roomId).emit("user_stop_typing", { roomId, userId })
+  })
+
+  socket.on("disconnect", () => {
+    if (unseenInterval) {
+      clearInterval(unseenInterval)
+      unseenInterval = null
+    }
   })
 }
