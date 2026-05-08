@@ -68,23 +68,35 @@ export default function RoomSidebar({
                 `}
               >
                 {/* Room avatar */}
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  {room.imageUrl ? (
-                    <img
-                      src={room.imageUrl}
-                      alt={room.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-base font-bold text-white">
-                      {room.name.charAt(0).toUpperCase()}
-                    </span>
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {room.imageUrl ? (
+                      <img
+                        src={room.imageUrl}
+                        alt={room.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-base font-bold text-white">
+                        {room.name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  {/* Unread indicator */}
+                  {(room.unreadCount || 0) > 0 && room.id !== activeRoomId && (
+                    <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                      <span className="text-[9px] font-bold text-white">
+                        {room.unreadCount! > 9 ? "9+" : room.unreadCount}
+                      </span>
+                    </div>
                   )}
                 </div>
 
                 {/* Room info */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">{room.name}</p>
+                  <p className={`text-sm truncate ${(room.unreadCount || 0) > 0 && room.id !== activeRoomId ? "font-bold" : "font-semibold"}`}>
+                    {room.name}
+                  </p>
                   <div className="flex items-center gap-1 text-xs text-zinc-400">
                     <Users size={12} />
                     <span>{room.members?.length || 0} members</span>

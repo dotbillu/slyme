@@ -20,6 +20,8 @@ export interface Room {
   _count?: {
     members: number;
   };
+  lastMessage?: Message | null;
+  unreadCount?: number;
 }
 
 export interface RoomWithMessages extends Room {

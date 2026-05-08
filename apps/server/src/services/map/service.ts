@@ -144,7 +144,7 @@ export async function createRoom(data: {
 }
 
 export async function getUserRooms(userId: string) {
-  return prisma.mapRoom.findMany({
+  const rooms = await prisma.mapRoom.findMany({
     where: {
       members: {
         some: { id: userId },
@@ -153,9 +153,41 @@ export async function getUserRooms(userId: string) {
     include: {
       createdBy: true,
       members: true,
+      groupMessages: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        include: {
+          sender: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          groupMessages: {
+            where: {
+              seenBy: {
+                none: { userId },
+              },
+              senderId: { not: userId },
+            },
+          },
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   })
+
+  return rooms.map((room) => ({
+    ...room,
+    lastMessage: room.groupMessages[0] || null,
+    unreadCount: room._count.groupMessages,
+    groupMessages: undefined,
+  }))
 }
 
 export async function updateRoom(
@@ -243,9 +275,9 @@ export async function getRoomById(roomId: string) {
 }
 
 export async function getRoomMessages(roomId: string, skip = 0, take = 50) {
-  return prisma.groupMessage.findMany({
+  const messages = await prisma.groupMessage.findMany({
     where: { roomId },
-    orderBy: { createdAt: "asc" },
+    orderBy: { createdAt: "desc" },
     skip,
     take,
     include: {
@@ -258,4 +290,33 @@ export async function getRoomMessages(roomId: string, skip = 0, take = 50) {
       },
     },
   })
+
+  // Return in ascending order for display
+  return messages.reverse()
+}
+
+export async function markMessagesSeen(roomId: string, userId: string) {
+  // Get all unseen messages in this room not sent by the user
+  const unseenMessages = await prisma.groupMessage.findMany({
+    where: {
+      roomId,
+      senderId: { not: userId },
+      seenBy: {
+        none: { userId },
+      },
+    },
+    select: { id: true },
+  })
+
+  if (unseenMessages.length === 0) return { marked: 0 }
+
+  await prisma.messageSeen.createMany({
+    data: unseenMessages.map((msg) => ({
+      userId,
+      messageId: msg.id,
+    })),
+    skipDuplicates: true,
+  })
+
+  return { marked: unseenMessages.length }
 }

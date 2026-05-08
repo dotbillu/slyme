@@ -71,3 +71,12 @@ export async function deleteRoom(id: string): Promise<void> {
 
   return handleResponse(res);
 }
+
+export async function markRoomSeen(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/rooms/${id}/seen`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  return handleResponse(res);
+}

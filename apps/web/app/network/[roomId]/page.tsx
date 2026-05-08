@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/app/AuthProvider"
 import { socket } from "@/lib/socket"
-import { fetchUserRooms } from "@/services/room/service"
+import { fetchUserRooms, fetchRoomMessages } from "@/services/room/service"
 import { Room, Message } from "@/types/room"
 import RoomSidebar from "./components/RoomSidebar"
 import ChatArea from "./components/ChatArea"
@@ -18,28 +18,50 @@ export default function RoomChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [connected, setConnected] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const joinedRoomRef = useRef<string | null>(null)
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const roomIdsRef = useRef<string[]>([])
+  const activeRoomRef = useRef<string>(roomId)
+  const socketInitialized = useRef(false)
+
+  // Keep activeRoomRef in sync
+  useEffect(() => {
+    activeRoomRef.current = roomId
+  }, [roomId])
 
   // Load user rooms for sidebar
   useEffect(() => {
     if (!user) return
     fetchUserRooms()
-      .then(setRooms)
+      .then((data) => {
+        setRooms(data)
+        roomIdsRef.current = data.map((r) => r.id)
+      })
       .catch(() => {})
   }, [user])
 
-  // Socket connection
+  // Socket connection — join ALL rooms
   useEffect(() => {
     if (!user || !roomId) return
+    // Wait until rooms are loaded
+    if (roomIdsRef.current.length === 0) return
 
-    // Pass userId via handshake auth
+    // Don't re-init if already running
+    if (socketInitialized.current && socket.connected) return
+
     socket.auth = { userId: user.id }
     socket.connect()
+    socketInitialized.current = true
+
+    const joinAllRooms = () => {
+      roomIdsRef.current.forEach((rid) => {
+        socket.emit("join_room", rid)
+      })
+    }
 
     socket.on("connect", () => {
       setConnected(true)
-      socket.emit("join_room", roomId)
-      joinedRoomRef.current = roomId
+      joinAllRooms()
     })
 
     socket.on("connect_error", (err) => {
@@ -47,15 +69,35 @@ export default function RoomChatPage() {
       setConnected(false)
     })
 
+    // Only set messages for the ACTIVE room
     socket.on("room_messages", ({ roomId: rid, messages: msgs }) => {
-      if (rid === roomId) {
+      if (rid === activeRoomRef.current) {
         setMessages(msgs)
+        setHasMore(msgs.length >= 50)
+        socket.emit("mark_seen", { roomId: rid })
       }
     })
 
     socket.on("receive_message", (msg: Message) => {
-      if (msg.roomId === roomId) {
-        setMessages((prev) => [...prev, msg])
+      if (msg.roomId === activeRoomRef.current) {
+        // Active room — add to chat
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev
+          return [...prev, msg]
+        })
+        socket.emit("mark_seen", { roomId: msg.roomId })
+      } else {
+        // Other room — update sidebar unread + last message
+        setRooms((prev) =>
+          prev.map((room) => {
+            if (room.id !== msg.roomId) return room
+            return {
+              ...room,
+              lastMessage: msg,
+              unreadCount: (room.unreadCount || 0) + (msg.senderId !== user!.id ? 1 : 0),
+            }
+          })
+        )
       }
     })
 
@@ -63,26 +105,25 @@ export default function RoomChatPage() {
       setConnected(false)
     })
 
-    // If already connected, join immediately
+    // If already connected
     if (socket.connected) {
       setConnected(true)
-      socket.emit("join_room", roomId)
-      joinedRoomRef.current = roomId
+      joinAllRooms()
     }
 
     return () => {
-      if (joinedRoomRef.current) {
-        socket.emit("leave_room", joinedRoomRef.current)
-        joinedRoomRef.current = null
-      }
+      roomIdsRef.current.forEach((rid) => {
+        socket.emit("leave_room", rid)
+      })
       socket.off("connect")
       socket.off("connect_error")
       socket.off("room_messages")
       socket.off("receive_message")
       socket.off("disconnect")
       socket.disconnect()
+      socketInitialized.current = false
     }
-  }, [user, roomId])
+  }, [user, roomId, rooms.length])
 
   const sendMessage = useCallback(
     (content: string) => {
@@ -92,15 +133,34 @@ export default function RoomChatPage() {
     [roomId]
   )
 
+  // Load older messages (scroll up pagination)
+  const loadOlderMessages = useCallback(async () => {
+    if (loadingOlder || !hasMore || !roomId) return
+    setLoadingOlder(true)
+    try {
+      const olderMsgs = await fetchRoomMessages(roomId, messages.length, 50)
+      if (olderMsgs.length < 50) setHasMore(false)
+      if (olderMsgs.length > 0) {
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id))
+          const newMsgs = olderMsgs.filter((m) => !existingIds.has(m.id))
+          return [...newMsgs, ...prev]
+        })
+      }
+    } catch {}
+    setLoadingOlder(false)
+  }, [loadingOlder, hasMore, roomId, messages.length])
+
   const handleRoomSelect = useCallback(
     (id: string) => {
       if (id === roomId) return
-      // Leave current room
-      if (joinedRoomRef.current) {
-        socket.emit("leave_room", joinedRoomRef.current)
-      }
       setMessages([])
+      setHasMore(true)
       setSidebarOpen(false)
+      // Clear unread for the room we're opening
+      setRooms((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, unreadCount: 0 } : r))
+      )
       router.push(`/network/${id}`)
     },
     [roomId, router]
@@ -112,7 +172,6 @@ export default function RoomChatPage() {
 
   return (
     <div className="flex h-screen bg-black text-white md:ml-[70px]">
-      {/* Sidebar - room list */}
       <RoomSidebar
         rooms={rooms}
         activeRoomId={roomId}
@@ -121,7 +180,6 @@ export default function RoomChatPage() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Chat area */}
       <ChatArea
         room={currentRoom || null}
         messages={messages}
@@ -129,6 +187,9 @@ export default function RoomChatPage() {
         connected={connected}
         onSendMessage={sendMessage}
         onOpenSidebar={() => setSidebarOpen(true)}
+        onLoadOlder={loadOlderMessages}
+        loadingOlder={loadingOlder}
+        hasMore={hasMore}
       />
     </div>
   )

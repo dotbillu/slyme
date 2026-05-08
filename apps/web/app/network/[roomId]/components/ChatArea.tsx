@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Room, Message } from "@/types/room"
-import { Send, Menu, Users, Info, User } from "lucide-react"
+import { Send, Menu, Users, Info, Loader2 } from "lucide-react"
 
 interface ChatAreaProps {
   room: Room | null
@@ -11,6 +11,9 @@ interface ChatAreaProps {
   connected: boolean
   onSendMessage: (content: string) => void
   onOpenSidebar: () => void
+  onLoadOlder: () => void
+  loadingOlder: boolean
+  hasMore: boolean
 }
 
 export default function ChatArea({
@@ -20,15 +23,57 @@ export default function ChatArea({
   connected,
   onSendMessage,
   onOpenSidebar,
+  onLoadOlder,
+  loadingOlder,
+  hasMore,
 }: ChatAreaProps) {
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const isInitialLoad = useRef(true)
+  const prevScrollHeight = useRef(0)
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on initial load and new messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (isInitialLoad.current && messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView()
+      isInitialLoad.current = false
+      return
+    }
+
+    // Only auto-scroll if user is near the bottom
+    const container = messagesContainerRef.current
+    if (!container) return
+    const isNearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 100
+    if (isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
   }, [messages])
+
+  // Maintain scroll position after loading older messages
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container || loadingOlder) return
+
+    if (prevScrollHeight.current > 0) {
+      const newScrollHeight = container.scrollHeight
+      container.scrollTop = newScrollHeight - prevScrollHeight.current
+      prevScrollHeight.current = 0
+    }
+  }, [messages, loadingOlder])
+
+  // Scroll-to-top detection for loading older messages
+  const handleScroll = useCallback(() => {
+    const container = messagesContainerRef.current
+    if (!container || loadingOlder || !hasMore) return
+
+    if (container.scrollTop < 50) {
+      prevScrollHeight.current = container.scrollHeight
+      onLoadOlder()
+    }
+  }, [loadingOlder, hasMore, onLoadOlder])
 
   const handleSend = () => {
     if (!input.trim()) return
@@ -88,8 +133,25 @@ export default function ChatArea({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
-        {messages.length === 0 ? (
+      <div
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
+      >
+        {/* Loading older indicator */}
+        {loadingOlder && (
+          <div className="flex justify-center py-2">
+            <Loader2 size={16} className="animate-spin text-zinc-500" />
+          </div>
+        )}
+
+        {!hasMore && messages.length > 0 && (
+          <div className="flex justify-center py-2">
+            <span className="text-[10px] text-zinc-600">Beginning of conversation</span>
+          </div>
+        )}
+
+        {messages.length === 0 && !loadingOlder ? (
           <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-2">
             <p className="text-sm">No messages yet</p>
             <p className="text-xs">Be the first to say something!</p>
@@ -108,8 +170,18 @@ export default function ChatArea({
                 {/* Avatar */}
                 <div className="w-7 flex-shrink-0">
                   {!isOwn && showAvatar ? (
-                    <div className="w-7 h-7 rounded-full bg-zinc-700 overflow-hidden">
-                    <User/>
+                    <div className="w-7 h-7 rounded-full bg-zinc-700 overflow-hidden flex items-center justify-center">
+                      {msg.sender?.avatarUrl ? (
+                        <img
+                          src={msg.sender.avatarUrl}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-xs text-zinc-300">
+                          {msg.sender?.username?.charAt(0)?.toUpperCase() || "?"}
+                        </span>
+                      )}
                     </div>
                   ) : null}
                 </div>
@@ -126,7 +198,7 @@ export default function ChatArea({
                 >
                   {!isOwn && showAvatar && (
                     <p className="text-[10px] text-zinc-400 mb-0.5 font-medium">
-                        <User/>
+                      {msg.sender?.username || "user"}
                     </p>
                   )}
                   <p className="break-words">{msg.content}</p>

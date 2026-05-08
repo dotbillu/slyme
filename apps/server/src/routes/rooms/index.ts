@@ -6,6 +6,7 @@ import {
   getAllRooms,
   getRoomById,
   getRoomMessages,
+  markMessagesSeen,
   updateRoom,
   deleteRoom,
   joinRoom,
@@ -115,6 +116,19 @@ router.post("/:id/join", requireAuth, async (req, res) => {
     return res.json(room)
   } catch {
     return res.status(400).json({ error: "join failed" })
+  }
+})
+
+router.post("/:id/seen", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).userId
+    const roomId = req.params.id as string
+
+    const result = await markMessagesSeen(roomId, userId)
+
+    return res.json(result)
+  } catch {
+    return res.status(500).json({ error: "failed to mark seen" })
   }
 })
 
