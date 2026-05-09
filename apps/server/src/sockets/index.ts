@@ -3,6 +3,7 @@ import { Server as HTTPServer } from "http"
 import cookie from "cookie"
 import jwt from "jsonwebtoken"
 import { registerChatHandlers } from "./chat"
+import { registerSearchHandlers } from "./search"
 
 export const initSocket = (server: HTTPServer) => {
   const io = new Server(server, {
@@ -44,6 +45,7 @@ export const initSocket = (server: HTTPServer) => {
 
   io.on("connection", (socket) => {
     registerChatHandlers(io, socket)
+    registerSearchHandlers(io, socket)
   })
 
   return io
