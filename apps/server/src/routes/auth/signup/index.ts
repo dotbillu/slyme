@@ -10,6 +10,7 @@ import {
   getUserbyEmail,
   getUserbyUsername,
 } from "../../../services/auth/services";
+import { cookieOptions } from "../../../lib/cookie";
 
 router.post("/credentials", async (req, res) => {
   const { name, username, password, email } = req.body;
@@ -25,12 +26,7 @@ router.post("/credentials", async (req, res) => {
   }
   user = await createUserByCredentials({ name, username, password, email });
   const appToken = generateToken(user);
-  res.cookie("token", appToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  res.cookie("token", appToken, cookieOptions);
 
   return res.json({ message: "Auth success", user });
 });
@@ -52,12 +48,7 @@ router.post("/oauth/create-user", verifyGoogleToken, async (req, res) => {
       .json({ error: "Username already Exists ,Pls login" });
   user = await createUserOauth(payload, username);
   const appToken = generateToken(user);
-  res.cookie("token", appToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  res.cookie("token", appToken, cookieOptions);
 
   return res.json({ message: "Auth success", user });
 });

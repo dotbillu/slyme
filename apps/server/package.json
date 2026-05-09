@@ -8,6 +8,7 @@
     "build": "tsc -b && tsc-alias",
     "start": "node ./dist/server.js",
     "render:build": "pnpm install;npx prisma generate;tsc -b && tsc-alias",
+    "dev": "tsx watch src/server.ts",
     "lint": "eslint src/",
     "db:gen": "npx prisma generate",
     "db:mig": "npx prisma migrate dev"

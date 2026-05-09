@@ -5,6 +5,7 @@ import "dotenv/config";
 import { verifyGoogleToken } from "../../../middlewares/auth/oauth";
 import { generateToken, getUserbyEmail } from "../../../services/auth/services";
 import { validateCredentials } from "../../../middlewares/auth/credentials";
+import { cookieOptions } from "../../../lib/cookie";
 
 router.post("/oauth", verifyGoogleToken, async (req, res) => {
   const payload = (req as any).googlePayload;
@@ -14,12 +15,7 @@ router.post("/oauth", verifyGoogleToken, async (req, res) => {
     return res.status(403).json({ error: "Not registered, try signing up?" });
 
   const appToken = generateToken(user);
-  res.cookie("token", appToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  res.cookie("token", appToken, cookieOptions);
 
   return res.json({ message: "Auth success", user });
 });
@@ -27,12 +23,7 @@ router.post("/oauth", verifyGoogleToken, async (req, res) => {
 router.post("/credentials", validateCredentials, async (req, res) => {
   const user = (req as any).user;
   const appToken = generateToken(user);
-  res.cookie("token", appToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  res.cookie("token", appToken, cookieOptions);
 
   return res.json({ message: "Auth success", user });
 });

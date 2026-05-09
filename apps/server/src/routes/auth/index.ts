@@ -5,6 +5,7 @@ import signUpRoutes from "./signup/index";
 import type { Router as ExpressRouter } from "express";
 import { requireAuth } from "../../middlewares/auth/jwt";
 import { prisma } from "../../lib/prisma";
+import { cookieOptions } from "../../lib/cookie";
 
 import jwt from "jsonwebtoken";
 import { userSelect } from "../../lib/user.dto";
@@ -23,11 +24,7 @@ router.get("/me", requireAuth, async (req, res) => {
   });
 
   if (!user) {
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-    });
+    res.clearCookie("token", cookieOptions);
     return res.status(401).json({ error: "User not found" });
   }
 
@@ -47,11 +44,7 @@ router.get("/me", requireAuth, async (req, res) => {
       { expiresIn: "7d" },
     );
 
-    res.cookie("token", newToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-    });
+    res.cookie("token", newToken, cookieOptions);
   }
 
   return res.json(user);
