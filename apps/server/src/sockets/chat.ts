@@ -1,7 +1,7 @@
-import { Server, Socket } from "socket.io"
-import { PrismaClient } from "@prisma/client"
+import { Server, Socket } from "socket.io";
+import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 async function getUnseenCount(userId: string): Promise<number> {
   return prisma.groupMessage.count({
@@ -12,25 +12,25 @@ async function getUnseenCount(userId: string): Promise<number> {
       senderId: { not: userId },
       seenBy: { none: { userId } },
     },
-  })
+  });
 }
 
 export const registerChatHandlers = (io: Server, socket: Socket) => {
-  const userId = socket.data.userId
-  let unseenInterval: NodeJS.Timeout | null = null
+  const userId = socket.data.userId;
+  let unseenInterval: NodeJS.Timeout | null = null;
 
   socket.on("get_unseen_count", async () => {
-    if (!userId) return
+    if (!userId) return;
     try {
-      const count = await getUnseenCount(userId)
-      socket.emit("unseen_count", { count })
+      const count = await getUnseenCount(userId);
+      socket.emit("unseen_count", { count });
     } catch {}
-  })
+  });
 
   socket.on("join_room", async (roomId: string) => {
-    if (!roomId) return
+    if (!roomId) return;
 
-    socket.join(roomId)
+    socket.join(roomId);
 
     const messages = await prisma.groupMessage.findMany({
       where: { roomId },
@@ -45,59 +45,71 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
           },
         },
       },
-    })
+    });
 
-    socket.emit("room_messages", { roomId, messages: messages.reverse() })
-  })
+    socket.emit("room_messages", { roomId, messages: messages.reverse() });
+  });
 
   socket.on("leave_room", (roomId: string) => {
-    if (!roomId) return
-    socket.leave(roomId)
-  })
+    if (!roomId) return;
+    socket.leave(roomId);
+  });
 
   socket.on("send_message", async ({ roomId, content }) => {
-    if (!roomId || !content || !userId) return
+    if (!roomId || !content || !userId) return;
+    const messageId = crypto.randomUUID();
 
-    const message = await prisma.groupMessage.create({
-      data: {
-        content,
-        roomId,
-        senderId: userId,
+    const messagePayload = {
+      id: messageId,
+      content,
+      roomId,
+      senderId: userId,
+      createdAt: new Date(),
+      sender: {
+        id: userId,
+        username: socket.data.username,
+        avatarUrl: socket.data.avatarUrl,
       },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            username: true,
-            avatarUrl: true,
-          },
+    };
+
+    io.to(roomId).emit("receive_message", messagePayload);
+    try {
+      await prisma.groupMessage.create({
+        data: {
+          id: messageId,
+          content,
+          roomId,
+          senderId: userId,
         },
-      },
-    })
+      });
+      const room = await prisma.mapRoom.findUnique({
+        where: { id: roomId },
+        select: { members: { select: { id: true } } },
+      });
 
-    io.to(roomId).emit("receive_message", message)
+      if (room) {
+        const allSockets = await io.fetchSockets();
+        const recipients = room.members.filter(
+          (member) => member.id !== userId,
+        );
 
-    const room = await prisma.mapRoom.findUnique({
-      where: { id: roomId },
-      select: { members: { select: { id: true } } },
-    })
+        await Promise.all(
+          recipients.map(async (member) => {
+            const count = await getUnseenCount(member.id);
 
-    if (room) {
-      for (const member of room.members) {
-        if (member.id === userId) continue
-        const count = await getUnseenCount(member.id)
-        const sockets = await io.fetchSockets()
-        for (const s of sockets) {
-          if (s.data.userId === member.id) {
-            s.emit("unseen_count", { count })
-          }
-        }
+            allSockets
+              .filter((s) => s.data.userId === member.id)
+              .forEach((s) => s.emit("unseen_count", { count }));
+          }),
+        );
       }
+    } catch (error) {
+      console.error("Failed to process message background tasks:", error);
     }
-  })
+  });
 
   socket.on("mark_seen", async ({ roomId }) => {
-    if (!roomId || !userId) return
+    if (!roomId || !userId) return;
 
     try {
       const unseenMessages = await prisma.groupMessage.findMany({
@@ -107,7 +119,7 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
           seenBy: { none: { userId } },
         },
         select: { id: true },
-      })
+      });
 
       if (unseenMessages.length > 0) {
         await prisma.messageSeen.createMany({
@@ -116,30 +128,30 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
             messageId: msg.id,
           })),
           skipDuplicates: true,
-        })
+        });
       }
 
-      socket.emit("messages_marked_seen", { roomId })
+      socket.emit("messages_marked_seen", { roomId });
 
-      const count = await getUnseenCount(userId)
-      socket.emit("unseen_count", { count })
+      const count = await getUnseenCount(userId);
+      socket.emit("unseen_count", { count });
     } catch {}
-  })
+  });
 
   socket.on("typing", ({ roomId }) => {
-    if (!roomId || !userId) return
-    socket.to(roomId).emit("user_typing", { roomId, userId })
-  })
+    if (!roomId || !userId) return;
+    socket.to(roomId).emit("user_typing", { roomId, userId });
+  });
 
   socket.on("stop_typing", ({ roomId }) => {
-    if (!roomId || !userId) return
-    socket.to(roomId).emit("user_stop_typing", { roomId, userId })
-  })
+    if (!roomId || !userId) return;
+    socket.to(roomId).emit("user_stop_typing", { roomId, userId });
+  });
 
   socket.on("disconnect", () => {
     if (unseenInterval) {
-      clearInterval(unseenInterval)
-      unseenInterval = null
+      clearInterval(unseenInterval);
+      unseenInterval = null;
     }
-  })
-}
+  });
+};
