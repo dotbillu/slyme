@@ -86,7 +86,7 @@ importers:
         version: 7.6.0
       '@prisma/client':
         specifier: ^6.18.0
-        version: 6.18.0(prisma@6.18.0(typescript@6.0.2))(typescript@6.0.2)
+        version: 6.18.0(prisma@6.18.0(typescript@5.9.2))(typescript@5.9.2)
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -141,7 +141,7 @@ importers:
         version: 22.15.3
       prisma:
         specifier: ^6.18.0
-        version: 6.18.0(typescript@6.0.2)
+        version: 6.18.0(typescript@5.9.2)
       tsc-alias:
         specifier: ^1.8.16
         version: 1.8.16
@@ -149,8 +149,8 @@ importers:
         specifier: ^4.21.0
         version: 4.21.0
       typescript:
-        specifier: ^6.0.2
-        version: 6.0.2
+        specifier: 5.9.2
+        version: 5.9.2
 
   apps/web:
     dependencies:
@@ -5673,11 +5673,6 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  typescript@6.0.2:
-    resolution: {integrity: sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ==}
-    engines: {node: '>=14.17'}
-    hasBin: true
-
   ua-parser-js@1.0.41:
     resolution: {integrity: sha512-LbBDqdIC5s8iROCUjMbW1f5dJQTEFB1+KO9ogbvlb3nm9n4YHa5p4KTvFPWvh2Hs8gZMBuiB1/8+pdfe/tDPug==}
     hasBin: true
@@ -7275,10 +7270,10 @@ snapshots:
     transitivePeerDependencies:
       - pg-native
 
-  '@prisma/client@6.18.0(prisma@6.18.0(typescript@6.0.2))(typescript@6.0.2)':
+  '@prisma/client@6.18.0(prisma@6.18.0(typescript@5.9.2))(typescript@5.9.2)':
     optionalDependencies:
-      prisma: 6.18.0(typescript@6.0.2)
-      typescript: 6.0.2
+      prisma: 6.18.0(typescript@5.9.2)
+      typescript: 5.9.2
 
   '@prisma/config@6.18.0':
     dependencies:
@@ -11439,12 +11434,12 @@ snapshots:
       ansi-styles: 5.2.0
       react-is: 18.3.1
 
-  prisma@6.18.0(typescript@6.0.2):
+  prisma@6.18.0(typescript@5.9.2):
     dependencies:
       '@prisma/config': 6.18.0
       '@prisma/engines': 6.18.0
     optionalDependencies:
-      typescript: 6.0.2
+      typescript: 5.9.2
     transitivePeerDependencies:
       - magicast
 
@@ -12457,8 +12452,6 @@ snapshots:
       - supports-color
 
   typescript@5.9.2: {}
-
-  typescript@6.0.2: {}
 
   ua-parser-js@1.0.41:
     optional: true
