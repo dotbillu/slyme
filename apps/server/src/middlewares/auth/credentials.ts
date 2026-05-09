@@ -27,7 +27,7 @@ export async function validateCredentials(
     },
   });
 
-  if (!user) {
+  if (!user || !user.password) {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 

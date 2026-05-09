@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc -b && tsc-alias",
     "start": "node ./dist/server.js",
+    "render:start": "npx prisma generate && node ./dist/server.js",
     "dev": "tsx watch src/server.ts",
     "lint": "eslint src/",
     "db:gen": "npx prisma generate",
