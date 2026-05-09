@@ -2,17 +2,17 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import { ArrowLeft, MapPin, Pencil, Loader2, Check } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { ArrowLeft, ArrowRight, MapPin, Pencil, Loader2, Check, ImagePlus } from "lucide-react"
 import { useAuth } from "@/app/AuthProvider"
 import { CreateRoomPayload } from "@/types/room"
 import { createRoom } from "@/services/room/service"
 import LocationPickerView from "../components/LocationPickerView"
 
-type View = "form" | "locationPicker"
+type View = "step1" | "step2" | "locationPicker"
 
 const inputClass =
-  "w-full p-3 rounded-xl bg-zinc-800 text-white text-sm outline-none focus:ring-1 focus:ring-purple-500/50"
+  "w-full p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white text-sm outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition"
 
 const ROOM_TYPES = [
   "Community",
@@ -29,7 +29,7 @@ const ROOM_TYPES = [
 export default function CreateRoomPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [view, setView] = useState<View>("form")
+  const [view, setView] = useState<View>("step1")
 
   // Location
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
@@ -39,10 +39,10 @@ export default function CreateRoomPage() {
 
   // Form
   const [form, setForm] = useState({
+    imageUrl: "",
     name: "",
     description: "",
     type: ROOM_TYPES[0] as string,
-    imageUrl: "",
   })
 
   const [loading, setLoading] = useState(false)
@@ -84,8 +84,19 @@ export default function CreateRoomPage() {
   const handleLocationConfirm = useCallback((lat: number, lng: number, name: string) => {
     setPickedLocation({ lat, lng })
     setPickedLocationName(name)
-    setView("form")
+    setView("step2")
   }, [])
+
+  const handleNext = () => {
+    if (!form.name.trim()) { setError("Room name is required"); return }
+    setError(null)
+    setView("step2")
+  }
+
+  const handleBack = () => {
+    setError(null)
+    setView("step1")
+  }
 
   const handleSubmit = async () => {
     if (!form.name.trim()) { setError("Room name is required"); return }
@@ -120,7 +131,7 @@ export default function CreateRoomPage() {
         avatarUrl={user.avatarUrl}
         initialPicked={pickedLocation}
         onConfirm={handleLocationConfirm}
-        onBack={() => setView("form")}
+        onBack={() => setView("step2")}
       />
     )
   }
@@ -129,117 +140,189 @@ export default function CreateRoomPage() {
     <div className="min-h-screen bg-black text-white md:ml-[70px] pb-20 md:pb-8">
       <div className="max-w-lg mx-auto px-4 pt-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <button
-            onClick={() => router.back()}
-            className="p-2 hover:bg-zinc-800 rounded-full transition"
+            onClick={view === "step1" ? () => router.back() : handleBack}
+            className="p-2 hover:bg-zinc-900 rounded-full transition"
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-semibold">New Room</h1>
+          <div className="flex flex-col items-center">
+            <h1 className="text-base font-semibold">New Room</h1>
+            <p className="text-[10px] text-zinc-500">Step {view === "step1" ? "1" : "2"} of 2</p>
+          </div>
           <div className="w-9" />
+        </div>
+
+        {/* Progress bar */}
+        <div className="flex gap-1.5 mb-6">
+          <div className="flex-1 h-1 rounded-full bg-purple-500" />
+          <div className={`flex-1 h-1 rounded-full transition-colors ${view === "step2" ? "bg-purple-500" : "bg-zinc-800"}`} />
         </div>
 
         {/* Error / Success */}
         {(error || success) && (
           <div className={`mb-4 p-3 rounded-xl text-xs text-center ${
-            success ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"
+            success ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"
           }`}>
             {success ? "Room created!" : error}
           </div>
         )}
 
-        {/* Form */}
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-zinc-400 text-xs">Room Name *</label>
-            <input
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Name your room"
-              className={inputClass}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-zinc-400 text-xs">Description</label>
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              placeholder="What's this room about?"
-              rows={3}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-zinc-400 text-xs">Type</label>
-              <select name="type" value={form.type} onChange={handleChange} className={`${inputClass} appearance-none`}>
-                {ROOM_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-zinc-400 text-xs">Image URL</label>
-              <input
-                name="imageUrl"
-                value={form.imageUrl}
-                onChange={handleChange}
-                placeholder="https://..."
-                className={inputClass}
-              />
-            </div>
-          </div>
-
-          {/* Location */}
-          <div className="flex flex-col gap-1">
-            <label className="text-zinc-400 text-xs">Location</label>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center gap-2 p-3 rounded-xl bg-zinc-800 text-sm min-w-0">
-                <MapPin size={14} className="text-purple-400 shrink-0" />
-                <span className="text-white truncate text-xs">
-                  {locationName || "Fetching location..."}
-                </span>
+        <AnimatePresence mode="wait">
+          {view === "step1" ? (
+            <motion.div
+              key="step1"
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col gap-4"
+            >
+              {/* Image upload — compact */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-zinc-400 text-xs font-medium">Photo</label>
+                {form.imageUrl ? (
+                  <div className="relative group">
+                    <img
+                      src={form.imageUrl}
+                      alt="preview"
+                      className="w-full h-40 rounded-xl object-cover border border-zinc-800"
+                      onError={() => setForm((p) => ({ ...p, imageUrl: "" }))}
+                    />
+                    <button
+                      onClick={() => setForm((p) => ({ ...p, imageUrl: "" }))}
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 hover:bg-black transition text-white"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-3 p-3 rounded-xl border border-dashed border-zinc-800 hover:border-purple-500/50 hover:bg-zinc-900/50 cursor-pointer transition group">
+                    <div className="w-10 h-10 rounded-lg bg-zinc-900 flex items-center justify-center flex-shrink-0">
+                      <ImagePlus size={18} className="text-zinc-600 group-hover:text-purple-400 transition" />
+                    </div>
+                    <input
+                      type="url"
+                      name="imageUrl"
+                      value={form.imageUrl}
+                      onChange={handleChange}
+                      placeholder="Paste a photo URL..."
+                      className="flex-1 bg-transparent text-xs text-white placeholder:text-zinc-500 outline-none"
+                    />
+                  </label>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() => setView("locationPicker")}
-                className="p-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition shrink-0"
-                aria-label="Pick location on map"
-              >
-                <Pencil size={16} />
-              </button>
-            </div>
-            {location && (
-              <p className="text-[10px] text-zinc-600 mt-1">
-                {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
-              </p>
-            )}
-          </div>
-        </div>
 
-        {/* Submit */}
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={handleSubmit}
-          disabled={loading || success}
-          className="w-full mt-6 p-3.5 rounded-xl font-semibold text-sm text-white disabled:opacity-50 flex items-center justify-center gap-2 transition bg-purple-500 hover:bg-purple-600"
-        >
-          {loading ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : success ? (
-            "Done!"
+              {/* Name */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-zinc-400 text-xs font-medium">Room Name *</label>
+                <input
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Name your room"
+                  className={inputClass}
+                />
+              </div>
+
+              {/* Description */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-zinc-400 text-xs font-medium">Description</label>
+                <textarea
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  placeholder="What's this room about?"
+                  rows={4}
+                  className={`${inputClass} resize-none`}
+                />
+              </div>
+
+              {/* Next button */}
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={handleNext}
+                className="w-full mt-2 p-3.5 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition bg-purple-500 hover:bg-purple-600"
+              >
+                Next
+                <ArrowRight size={16} />
+              </motion.button>
+            </motion.div>
           ) : (
-            <>
-              <Check size={16} />
-              Create Room
-            </>
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 16 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col gap-4"
+            >
+              {/* Type */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-zinc-400 text-xs font-medium">Type</label>
+                <select
+                  name="type"
+                  value={form.type}
+                  onChange={handleChange}
+                  className={`${inputClass} appearance-none`}
+                >
+                  {ROOM_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Location */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-zinc-400 text-xs font-medium flex items-center gap-1.5">
+                  <MapPin size={12} />
+                  Location
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 flex items-center gap-2 p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-sm min-w-0">
+                    <MapPin size={14} className="text-purple-400 shrink-0" />
+                    <span className="text-white truncate text-xs">
+                      {locationName || "Fetching location..."}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setView("locationPicker")}
+                    className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition shrink-0"
+                    aria-label="Pick location on map"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                </div>
+                {location && (
+                  <p className="text-[10px] text-zinc-600">
+                    {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
+                  </p>
+                )}
+              </div>
+
+              {/* Submit */}
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={handleSubmit}
+                disabled={loading || success}
+                className="w-full mt-2 p-3.5 rounded-xl font-semibold text-sm text-white disabled:opacity-50 flex items-center justify-center gap-2 transition bg-purple-500 hover:bg-purple-600"
+              >
+                {loading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : success ? (
+                  "Done!"
+                ) : (
+                  <>
+                    <Check size={16} />
+                    Create Room
+                  </>
+                )}
+              </motion.button>
+            </motion.div>
           )}
-        </motion.button>
+        </AnimatePresence>
       </div>
     </div>
   )
