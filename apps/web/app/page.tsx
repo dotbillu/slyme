@@ -1,14 +1,12 @@
 "use client";
 import { getMe } from "@/services/auth/service";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function Home() {
+  const router = useRouter();
   useEffect(() => {
-    async function getmebro() {
-      const res = await getMe();
-      return res;
-    }
-    getmebro();
+    router.replace("/explore");
   }, []);
   return (
     <div className="bg-black h-screen w-screen flex justify-center items-center">
@@ -17,7 +15,9 @@ export default function Home() {
           alert("click ");
         }}
         className=" border borer white"
-      >click</button>
+      >
+        click
+      </button>
     </div>
   );
 }

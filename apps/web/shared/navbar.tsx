@@ -65,11 +65,37 @@ export default function Navbar() {
     if (socket.connected) {
       socket.emit("get_unseen_count");
     }
-
   }, [user, setUnseenCount]);
+  const isAuthPage = pathname === "/signin" || pathname === "/signup";
+  if (!user) {
+    return !isAuthPage ? (
+      <div className="fixed top-0 left-0 w-full z-[2000]">
+        <div className="relative w-full px-5 h-20 flex items-center justify-between bg-gradient-to-b from-black/50 via-black/30 to-transparent backdrop-blur-md">
+          <div className="flex items-center gap-3 ">
+            <Image src="/slymelogo.png" alt="logo" width={50} height={28} />
+          </div>
 
-  if (!user) return <></>;
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push("/signin")}
+              className="text-[17px] px-4 py-2 rounded-lg bg-[#5cb038] text-white font-bold "
+            >
+              Sign in
+            </button>
 
+            <button
+              onClick={() => router.push("/signup")}
+              className="text-[17px] px-3 py-1.5 rounded-lg  text-white  hover:underline font-bold"
+            >
+              Sign Up
+            </button>
+          </div>
+
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/40 to-transparent" />
+        </div>
+      </div>
+    ) : null;
+  }
   const items: NavItem[] = [
     // { name: "Home", href: "/", icon: Home },
     { name: "Explore", href: "/explore", icon: Compass },
@@ -106,7 +132,9 @@ export default function Navbar() {
         <div className="flex flex-col gap-3 px-3 flex-1 justify-center">
           {items.map((i, k) => {
             const Icon = i.icon;
-            const isActive = pathname === i.href || (i.name === "Messages" && pathname.startsWith("/network"));
+            const isActive =
+              pathname === i.href ||
+              (i.name === "Messages" && pathname.startsWith("/network"));
 
             if (i.name === "Create") {
               return (
@@ -235,7 +263,9 @@ export default function Navbar() {
         <div className="flex justify-around items-center h-16">
           {items.slice(0, 5).map((i, k) => {
             const Icon = i.icon;
-            const isActive = pathname === i.href || (i.name === "Messages" && pathname.startsWith("/network"));
+            const isActive =
+              pathname === i.href ||
+              (i.name === "Messages" && pathname.startsWith("/network"));
             if (i.name === "Create") {
               return (
                 <div key={k} className="relative" ref={createRef}>
