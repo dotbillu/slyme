@@ -14,7 +14,6 @@ import {
 
 const router = Router()
 
-// Open route - get all rooms (no auth required, for map display)
 router.get("/all", async (req, res) => {
   try {
     const rooms = await getAllRooms()
@@ -24,7 +23,6 @@ router.get("/all", async (req, res) => {
   }
 })
 
-// Get a single room by ID with messages
 router.get("/:id", requireAuth, async (req, res) => {
   try {
     const roomId = req.params.id as string
@@ -40,7 +38,6 @@ router.get("/:id", requireAuth, async (req, res) => {
   }
 })
 
-// Get messages for a room
 router.get("/:id/messages", requireAuth, async (req, res) => {
   try {
     const roomId = req.params.id as string

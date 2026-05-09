@@ -19,7 +19,6 @@ export const registerSearchHandlers = (io: Server, socket: Socket) => {
     try {
       const mode = "insensitive" as const
 
-      // Users — search by username, name, bio
       const users = await prisma.user.findMany({
         where: {
           OR: [
@@ -38,7 +37,6 @@ export const registerSearchHandlers = (io: Server, socket: Socket) => {
         take: 10,
       })
 
-      // Rooms — search by name, description, type
       const rooms = await prisma.mapRoom.findMany({
         where: {
           OR: [
@@ -63,7 +61,6 @@ export const registerSearchHandlers = (io: Server, socket: Socket) => {
         take: 10,
       })
 
-      // Gigs — search by title, description, type, reward
       const gigs = await prisma.gig.findMany({
         where: {
           OR: [

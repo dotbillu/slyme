@@ -1,19 +1,9 @@
 import { Server, Socket } from "socket.io";
 import { PrismaClient } from "@prisma/client";
+import { getUnseenCount } from "../services/socket/service";
 
 const prisma = new PrismaClient();
 
-async function getUnseenCount(userId: string): Promise<number> {
-  return prisma.groupMessage.count({
-    where: {
-      room: {
-        members: { some: { id: userId } },
-      },
-      senderId: { not: userId },
-      seenBy: { none: { userId } },
-    },
-  });
-}
 
 export const registerChatHandlers = (io: Server, socket: Socket) => {
   const userId = socket.data.userId;
