@@ -182,7 +182,7 @@ export async function getUserRooms(userId: string) {
     orderBy: { createdAt: "desc" },
   })
 
-  return rooms.map((room) => ({
+  return rooms.map((room: any) => ({
     ...room,
     lastMessage: room.groupMessages[0] || null,
     unreadCount: room._count.groupMessages,
@@ -311,7 +311,7 @@ export async function markMessagesSeen(roomId: string, userId: string) {
   if (unseenMessages.length === 0) return { marked: 0 }
 
   await prisma.messageSeen.createMany({
-    data: unseenMessages.map((msg) => ({
+    data: unseenMessages.map((msg: { id: string }) => ({
       userId,
       messageId: msg.id,
     })),

@@ -111,7 +111,7 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
 
       if (unseenMessages.length > 0) {
         await prisma.messageSeen.createMany({
-          data: unseenMessages.map((msg) => ({
+          data: unseenMessages.map((msg: { id: string }) => ({
             userId,
             messageId: msg.id,
           })),
