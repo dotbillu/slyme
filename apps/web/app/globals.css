@@ -42,3 +42,21 @@ button,
 nav {
   z-index: 9999;
 }
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar globally on gig detail panels */
+[data-gig-detail] ::-webkit-scrollbar {
+  display: none;
+}
+[data-gig-detail] {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}

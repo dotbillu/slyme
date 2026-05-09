@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, ArrowRight, MapPin, Pencil, Loader2, Check, ImagePlus } from "lucide-react"
+import { ArrowLeft, ArrowRight, MapPin, Pencil, Loader2, Check, Upload, X } from "lucide-react"
 import { useAuth } from "@/app/AuthProvider"
 import { CreateRoomPayload } from "@/types/room"
 import { createRoom } from "@/services/room/service"
@@ -26,10 +26,23 @@ const ROOM_TYPES = [
   "Other",
 ] as const
 
+async function uploadFile(file: File): Promise<string> {
+  const formData = new FormData()
+  formData.append("file", file)
+  const res = await fetch("/api/upload", { method: "POST", body: formData })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || "Upload failed")
+  }
+  const data = await res.json()
+  return data.url
+}
+
 export default function CreateRoomPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [view, setView] = useState<View>("step1")
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Location
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
@@ -37,9 +50,13 @@ export default function CreateRoomPage() {
   const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [pickedLocationName, setPickedLocationName] = useState("")
 
+  // Image
+  const [imageUrl, setImageUrl] = useState("")
+  const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+
   // Form
   const [form, setForm] = useState({
-    imageUrl: "",
     name: "",
     description: "",
     type: ROOM_TYPES[0] as string,
@@ -87,6 +104,46 @@ export default function CreateRoomPage() {
     setView("step2")
   }, [])
 
+  // Image upload logic (single image for rooms)
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) return
+    setUploading(true)
+    setError(null)
+    try {
+      const url = await uploadFile(file)
+      setImageUrl(url)
+    } catch (err: any) {
+      setError(err.message || "Failed to upload image")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFile(e.target.files[0])
+      e.target.value = ""
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0])
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+  }
+
   const handleNext = () => {
     if (!form.name.trim()) { setError("Room name is required"); return }
     setError(null)
@@ -108,7 +165,7 @@ export default function CreateRoomPage() {
         name: form.name,
         description: form.description || undefined,
         type: form.type,
-        imageUrl: form.imageUrl || undefined,
+        imageUrl: imageUrl || undefined,
         latitude: location.lat,
         longitude: location.lng,
       }
@@ -179,38 +236,56 @@ export default function CreateRoomPage() {
               transition={{ duration: 0.2 }}
               className="flex flex-col gap-4"
             >
-              {/* Image upload — compact */}
+              {/* Image upload - drag & drop + file picker */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-zinc-400 text-xs font-medium">Photo</label>
-                {form.imageUrl ? (
+
+                {imageUrl ? (
                   <div className="relative group">
                     <img
-                      src={form.imageUrl}
-                      alt="preview"
+                      src={imageUrl}
+                      alt="Room preview"
                       className="w-full h-40 rounded-xl object-cover border border-zinc-800"
-                      onError={() => setForm((p) => ({ ...p, imageUrl: "" }))}
                     />
                     <button
-                      onClick={() => setForm((p) => ({ ...p, imageUrl: "" }))}
-                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 hover:bg-black transition text-white"
+                      onClick={() => setImageUrl("")}
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 hover:bg-red-500 transition text-white"
                     >
-                      <Pencil size={14} />
+                      <X size={14} />
                     </button>
                   </div>
                 ) : (
-                  <label className="flex items-center gap-3 p-3 rounded-xl border border-dashed border-zinc-800 hover:border-purple-500/50 hover:bg-zinc-900/50 cursor-pointer transition group">
-                    <div className="w-10 h-10 rounded-lg bg-zinc-900 flex items-center justify-center flex-shrink-0">
-                      <ImagePlus size={18} className="text-zinc-600 group-hover:text-purple-400 transition" />
-                    </div>
+                  <div
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed cursor-pointer transition ${
+                      dragOver
+                        ? "border-purple-500 bg-purple-500/10"
+                        : "border-zinc-800 hover:border-purple-500/50 hover:bg-zinc-900/50"
+                    }`}
+                  >
+                    {uploading ? (
+                      <Loader2 size={24} className="text-purple-400 animate-spin" />
+                    ) : (
+                      <Upload size={24} className={`${dragOver ? "text-purple-400" : "text-zinc-600"} transition`} />
+                    )}
+                    <p className="text-xs text-zinc-500 text-center">
+                      {uploading
+                        ? "Uploading..."
+                        : dragOver
+                        ? "Drop image here"
+                        : "Click to browse or drag & drop an image"}
+                    </p>
                     <input
-                      type="url"
-                      name="imageUrl"
-                      value={form.imageUrl}
-                      onChange={handleChange}
-                      placeholder="Paste a photo URL..."
-                      className="flex-1 bg-transparent text-xs text-white placeholder:text-zinc-500 outline-none"
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileInput}
+                      className="hidden"
                     />
-                  </label>
+                  </div>
                 )}
               </div>
 
@@ -243,7 +318,8 @@ export default function CreateRoomPage() {
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={handleNext}
-                className="w-full mt-2 p-3.5 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition bg-purple-500 hover:bg-purple-600"
+                disabled={uploading}
+                className="w-full mt-2 p-3.5 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition bg-purple-500 hover:bg-purple-600 disabled:opacity-50"
               >
                 Next
                 <ArrowRight size={16} />

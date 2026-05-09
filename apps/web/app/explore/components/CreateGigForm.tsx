@@ -2,13 +2,25 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pencil, MapPin, Loader2, ArrowRight, ArrowLeft } from "lucide-react";
+import { Pencil, MapPin, Loader2, ArrowRight, ArrowLeft, Upload, X } from "lucide-react";
 import { CreateGigPayload, GIG_TYPES } from "@/types/gig";
 import { createGig } from "@/services/gig/service";
 
 function toLocalDatetimeString(date: Date) {
   const pad = (n: number) => n.toString().padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+async function uploadFile(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/upload", { method: "POST", body: formData });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Upload failed");
+  }
+  const data = await res.json();
+  return data.url;
 }
 
 interface CreateGigFormProps {
@@ -24,7 +36,60 @@ const inputClass =
   "w-full p-3 rounded-xl bg-zinc-800 text-white text-sm outline-none focus:ring-1 focus:ring-green-500/50";
 
 /* ─── Step 1: Details ─── */
-function StepDetails({ form, handleChange }: { form: any; handleChange: any }) {
+function StepDetails({
+  form,
+  handleChange,
+  imageUrls,
+  setImageUrls,
+  uploading,
+  setUploading,
+  setError,
+}: {
+  form: any;
+  handleChange: any;
+  imageUrls: string[];
+  setImageUrls: React.Dispatch<React.SetStateAction<string[]>>;
+  uploading: boolean;
+  setUploading: React.Dispatch<React.SetStateAction<boolean>>;
+  setError: React.Dispatch<React.SetStateAction<string | null>>;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleFiles = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (fileArray.length === 0) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const urls = await Promise.all(fileArray.map(uploadFile));
+      setImageUrls((prev) => [...prev, ...urls]);
+    } catch (err: any) {
+      setError(err.message || "Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFiles(e.target.files);
+      e.target.value = "";
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImageUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
@@ -71,15 +136,87 @@ function StepDetails({ form, handleChange }: { form: any; handleChange: any }) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-zinc-400 text-xs">Image URL</label>
-        <input
-          name="imageUrl"
-          value={form.imageUrl}
-          onChange={handleChange}
-          placeholder="https://..."
-          className={inputClass}
-        />
+      {/* Image upload - drag & drop + file picker */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-zinc-400 text-xs">Photos</label>
+
+        {imageUrls.length > 0 ? (
+          <div
+            onDrop={handleDrop}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }}
+            className={`flex gap-2 flex-wrap p-2 rounded-xl border-2 border-dashed transition ${
+              dragOver
+                ? "border-green-500 bg-green-500/10"
+                : "border-transparent"
+            }`}
+          >
+            {imageUrls.map((url, i) => (
+              <div key={i} className="relative group w-16 h-16">
+                <img
+                  src={url}
+                  alt={`upload ${i + 1}`}
+                  className="w-full h-full rounded-lg object-cover border border-zinc-700"
+                />
+                <button
+                  onClick={() => removeImage(i)}
+                  className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+            {/* Add more button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="w-16 h-16 rounded-lg border-2 border-dashed border-zinc-700 hover:border-green-500/50 flex items-center justify-center transition"
+            >
+              {uploading ? (
+                <Loader2 size={16} className="text-green-400 animate-spin" />
+              ) : (
+                <Upload size={16} className="text-zinc-500" />
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileInput}
+              className="hidden"
+            />
+          </div>
+        ) : (
+          <div
+            onDrop={handleDrop}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }}
+            onClick={() => fileInputRef.current?.click()}
+            className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-xl border-2 border-dashed cursor-pointer transition ${
+              dragOver
+                ? "border-green-500 bg-green-500/10"
+                : "border-zinc-700 hover:border-green-500/50 hover:bg-zinc-800/50"
+            }`}
+          >
+            {uploading ? (
+              <Loader2 size={20} className="text-green-400 animate-spin" />
+            ) : (
+              <Upload size={20} className={`${dragOver ? "text-green-400" : "text-zinc-600"} transition`} />
+            )}
+            <p className="text-[11px] text-zinc-500 text-center">
+              {uploading ? "Uploading..." : dragOver ? "Drop images here" : "Click or drag & drop images"}
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileInput}
+              className="hidden"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -171,8 +308,10 @@ export default function CreateGigForm({
     title: "", description: "", reward: "",
     gigTime: toLocalDatetimeString(now),
     expiresAt: toLocalDatetimeString(tomorrow),
-    imageUrl: "", type: GIG_TYPES[0] as string,
+    type: GIG_TYPES[0] as string,
   });
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -204,7 +343,7 @@ export default function CreateGigForm({
         reward: form.reward || undefined,
         gigTime: new Date(form.gigTime).toISOString(),
         expiresAt: new Date(form.expiresAt).toISOString(),
-        imageUrls: form.imageUrl ? [form.imageUrl] : undefined,
+        imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
         type: form.type,
         latitude: location.lat,
         longitude: location.lng,
@@ -220,7 +359,8 @@ export default function CreateGigForm({
   const sharedProps = {
     form, handleChange, location, locationName, onOpenLocationPicker,
     step, direction, goNext, goBack, handleSubmit,
-    loading, error, success, onClose,
+    loading, error, success, onClose, imageUrls, setImageUrls,
+    uploading, setUploading, setError,
   };
 
   return (
@@ -236,7 +376,8 @@ function DesktopModal(props: any) {
   const {
     form, handleChange, location, locationName, onOpenLocationPicker,
     step, direction, goNext, goBack, handleSubmit,
-    loading, error, success, onClose,
+    loading, error, success, onClose, imageUrls, setImageUrls,
+    uploading, setUploading, setError,
   } = props;
 
   return (
@@ -267,7 +408,11 @@ function DesktopModal(props: any) {
             {step === 0 ? "New Gig" : "Schedule"}
           </h2>
           {step === 0 ? (
-            <button onClick={goNext} className="text-sm font-semibold text-green-400 hover:text-green-300 w-16 text-right flex items-center justify-end gap-1">
+            <button
+              onClick={goNext}
+              disabled={uploading}
+              className="text-sm font-semibold text-green-400 hover:text-green-300 disabled:opacity-50 w-16 text-right flex items-center justify-end gap-1"
+            >
               Next <ArrowRight size={14} />
             </button>
           ) : (
@@ -308,7 +453,15 @@ function DesktopModal(props: any) {
               transition={{ duration: 0.2 }}
             >
               {step === 0 ? (
-                <StepDetails form={form} handleChange={handleChange} />
+                <StepDetails
+                  form={form}
+                  handleChange={handleChange}
+                  imageUrls={imageUrls}
+                  setImageUrls={setImageUrls}
+                  uploading={uploading}
+                  setUploading={setUploading}
+                  setError={setError}
+                />
               ) : (
                 <StepSchedule
                   form={form} handleChange={handleChange}
@@ -329,7 +482,8 @@ function MobileDrawer(props: any) {
   const {
     form, handleChange, location, locationName, onOpenLocationPicker,
     step, direction, goNext, goBack, handleSubmit,
-    loading, error, success, onClose,
+    loading, error, success, onClose, imageUrls, setImageUrls,
+    uploading, setUploading, setError,
   } = props;
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -376,7 +530,11 @@ function MobileDrawer(props: any) {
             {step === 0 ? "New Gig" : "Schedule"}
           </h2>
           {step === 0 ? (
-            <button onClick={goNext} className="text-sm font-semibold text-green-400 w-14 text-right flex items-center justify-end gap-1">
+            <button
+              onClick={goNext}
+              disabled={uploading}
+              className="text-sm font-semibold text-green-400 disabled:opacity-50 w-14 text-right flex items-center justify-end gap-1"
+            >
               Next <ArrowRight size={14} />
             </button>
           ) : (
@@ -417,7 +575,15 @@ function MobileDrawer(props: any) {
               transition={{ duration: 0.2 }}
             >
               {step === 0 ? (
-                <StepDetails form={form} handleChange={handleChange} />
+                <StepDetails
+                  form={form}
+                  handleChange={handleChange}
+                  imageUrls={imageUrls}
+                  setImageUrls={setImageUrls}
+                  uploading={uploading}
+                  setUploading={setUploading}
+                  setError={setError}
+                />
               ) : (
                 <StepSchedule
                   form={form} handleChange={handleChange}
