@@ -8,7 +8,7 @@ import { registerSearchHandlers } from "./search";
 export const initSocket = (server: HTTPServer) => {
   const io = new Server(server, {
     cors: {
-      origin: ["http://localhost:3000", "https://slymev2-web.vercel.app"],
+      origin: ["http://localhost:3000", "https://slyme.dotbillu.in"],
       credentials: true,
     },
   });
