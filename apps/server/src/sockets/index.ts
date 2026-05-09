@@ -14,7 +14,6 @@ export const initSocket = (server: HTTPServer) => {
 
   io.use((socket, next) => {
     try {
-      // Try to extract userId from cookie if available
       const rawCookie = socket.request.headers.cookie
       if (rawCookie) {
         const cookies = cookie.parse(rawCookie)
@@ -28,8 +27,6 @@ export const initSocket = (server: HTTPServer) => {
         }
       }
 
-      // Fallback: accept connection without auth (for dev)
-      // userId can be passed via handshake auth
       const authUserId = socket.handshake.auth?.userId
       if (authUserId) {
         socket.data.userId = authUserId
@@ -37,7 +34,6 @@ export const initSocket = (server: HTTPServer) => {
 
       next()
     } catch {
-      // Still allow connection in dev, just without userId from cookie
       const authUserId = socket.handshake.auth?.userId
       if (authUserId) {
         socket.data.userId = authUserId

@@ -19,21 +19,6 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
   const userId = socket.data.userId
   let unseenInterval: NodeJS.Timeout | null = null
 
-  // Start pushing unseen count every 10 seconds
-  if (userId) {
-    const pushUnseenCount = async () => {
-      try {
-        const count = await getUnseenCount(userId)
-        socket.emit("unseen_count", { count })
-      } catch {}
-    }
-
-    pushUnseenCount()
-    console.log("sending count")
-    // unseenInterval = setInterval(pushUnseenCount, 10000)
-  }
-
-  // Client can also request it on demand
   socket.on("get_unseen_count", async () => {
     if (!userId) return
     try {
@@ -47,7 +32,6 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
 
     socket.join(roomId)
 
-    // Load latest 50 messages (desc then reverse for correct order)
     const messages = await prisma.groupMessage.findMany({
       where: { roomId },
       orderBy: { createdAt: "desc" },
@@ -93,7 +77,6 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
 
     io.to(roomId).emit("receive_message", message)
 
-    // Push updated unseen count to all OTHER members in the room
     const room = await prisma.mapRoom.findUnique({
       where: { id: roomId },
       select: { members: { select: { id: true } } },
@@ -103,7 +86,6 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
       for (const member of room.members) {
         if (member.id === userId) continue
         const count = await getUnseenCount(member.id)
-        // Emit to all sockets of this user
         const sockets = await io.fetchSockets()
         for (const s of sockets) {
           if (s.data.userId === member.id) {
@@ -139,7 +121,6 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
 
       socket.emit("messages_marked_seen", { roomId })
 
-      // Push updated unseen count
       const count = await getUnseenCount(userId)
       socket.emit("unseen_count", { count })
     } catch {}

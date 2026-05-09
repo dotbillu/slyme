@@ -1,10 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import Navbar from "../navbar";
 
-const Navbar = dynamic(() => import("@/shared/navbar"), {
-  ssr: false,
-});
 
 export default function ClientNavbar() {
   return <Navbar />;

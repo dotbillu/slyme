@@ -32,7 +32,6 @@ export default function Navbar() {
   const createRef = useRef<HTMLDivElement>(null);
   const socketInitRef = useRef(false);
 
-  // Close create menu on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (createRef.current && !createRef.current.contains(e.target as Node)) {
@@ -44,13 +43,9 @@ export default function Navbar() {
       return () => document.removeEventListener("mousedown", handleClick);
     }
   }, [createOpen]);
-
-  // Close on route change
   useEffect(() => {
     setCreateOpen(false);
   }, [pathname]);
-
-  // Socket connection for unseen count — navbar OWNS the socket lifecycle
   useEffect(() => {
     if (!user) return;
     if (socketInitRef.current) return;
@@ -71,13 +66,12 @@ export default function Navbar() {
       socket.emit("get_unseen_count");
     }
 
-    // Never disconnect — navbar is always mounted
   }, [user, setUnseenCount]);
 
   if (!user) return <></>;
 
   const items: NavItem[] = [
-    { name: "Home", href: "/", icon: Home },
+    // { name: "Home", href: "/", icon: Home },
     { name: "Explore", href: "/explore", icon: Compass },
     { name: "Search", href: "/search", icon: Search },
     { name: "Create", href: "#", icon: Plus },
@@ -92,7 +86,6 @@ export default function Navbar() {
 
   return (
     <div>
-      {/* Desktop sidebar */}
       <motion.nav
         onHoverStart={() => setOpen(true)}
         onHoverEnd={() => setOpen(false)}
@@ -115,7 +108,6 @@ export default function Navbar() {
             const Icon = i.icon;
             const isActive = pathname === i.href || (i.name === "Messages" && pathname.startsWith("/network"));
 
-            // Create button
             if (i.name === "Create") {
               return (
                 <div key={k} className="relative" ref={createRef}>
@@ -168,7 +160,6 @@ export default function Navbar() {
               );
             }
 
-            // Messages button with badge
             if (i.name === "Messages") {
               return (
                 <Link
@@ -240,14 +231,11 @@ export default function Navbar() {
         </div>
       </motion.nav>
 
-      {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full bg-black z-[100]">
         <div className="flex justify-around items-center h-16">
           {items.slice(0, 5).map((i, k) => {
             const Icon = i.icon;
             const isActive = pathname === i.href || (i.name === "Messages" && pathname.startsWith("/network"));
-
-            // Create button
             if (i.name === "Create") {
               return (
                 <div key={k} className="relative" ref={createRef}>
@@ -290,8 +278,6 @@ export default function Navbar() {
                 </div>
               );
             }
-
-            // Messages button with badge
             if (i.name === "Messages") {
               return (
                 <Link
