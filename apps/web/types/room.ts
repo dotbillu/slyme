@@ -49,3 +49,10 @@ export interface CreateRoomPayload {
   type?: string;
   imageUrl?: string;
 }
+
+export interface UpdateRoomPayload {
+  name?: string;
+  description?: string;
+  type?: string;
+  imageUrl?: string;
+}

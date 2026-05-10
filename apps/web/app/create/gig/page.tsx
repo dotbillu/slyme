@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, ArrowRight, MapPin, Pencil, Loader2, Check, ImagePlus, Clock, X, Upload } from "lucide-react"
+import { ArrowLeft, ArrowRight, MapPin, Pencil, Loader2, Check, ImagePlus, Clock, X, Upload, Search, Users } from "lucide-react"
 import { useAuth } from "@/app/AuthProvider"
 import { CreateGigPayload } from "@/types/gig"
 import { createGig } from "@/services/gig/service"
+import { socket } from "@/lib/socket"
+import { Room } from "@/types/room"
 import LocationPickerView from "../components/LocationPickerView"
 
 type View = "step1" | "step2" | "locationPicker"
@@ -65,6 +67,12 @@ export default function CreateGigPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
+  // Room picker
+  const [roomSearch, setRoomSearch] = useState("")
+  const [roomResults, setRoomResults] = useState<Room[]>([])
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
+  const [roomSearching, setRoomSearching] = useState(false)
+
   // Geolocation
   useEffect(() => {
     if (!navigator.geolocation) return
@@ -89,6 +97,29 @@ export default function CreateGigPage() {
       { enableHighAccuracy: true }
     )
   }, [])
+
+  // Room search via socket
+  useEffect(() => {
+    if (!roomSearch.trim()) {
+      setRoomResults([])
+      return
+    }
+
+    setRoomSearching(true)
+    socket.connect()
+    socket.emit("search", { query: roomSearch.trim() })
+
+    const handleResults = (data: { rooms: Room[] }) => {
+      setRoomResults(data.rooms || [])
+      setRoomSearching(false)
+    }
+
+    socket.on("search_results", handleResults)
+
+    return () => {
+      socket.off("search_results", handleResults)
+    }
+  }, [roomSearch])
 
   const location = pickedLocation || userLocation
   const locationName = pickedLocationName || currentLocationName
@@ -175,6 +206,7 @@ export default function CreateGigPage() {
         imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
         latitude: location.lat,
         longitude: location.lng,
+        roomId: selectedRoom?.id || undefined,
       }
       await createGig(payload)
       setSuccess(true)
@@ -416,6 +448,72 @@ export default function CreateGigPage() {
                   onChange={handleChange}
                   className={inputClass}
                 />
+              </div>
+
+              {/* Connect to Room */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-zinc-400 text-xs font-medium flex items-center gap-1.5">
+                  <Users size={12} />
+                  Connect to Room
+                </label>
+                {selectedRoom ? (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center shrink-0">
+                      {selectedRoom.imageUrl ? (
+                        <img src={selectedRoom.imageUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs text-zinc-400 font-medium">{selectedRoom.name.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white truncate">{selectedRoom.name}</p>
+                      <p className="text-[10px] text-zinc-500">{selectedRoom._count?.members || 0} members</p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedRoom(null)}
+                      className="p-1.5 rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-white transition"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+                      <Search size={14} className="text-zinc-500 shrink-0" />
+                      <input
+                        value={roomSearch}
+                        onChange={(e) => setRoomSearch(e.target.value)}
+                        placeholder="Search rooms to connect..."
+                        className="flex-1 bg-transparent text-sm text-white placeholder-zinc-600 outline-none"
+                      />
+                      {roomSearching && <Loader2 size={14} className="text-zinc-500 animate-spin" />}
+                    </div>
+                    {roomResults.length > 0 && roomSearch.trim() && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden z-10 max-h-48 overflow-y-auto">
+                        {roomResults.map((room) => (
+                          <button
+                            key={room.id}
+                            onClick={() => { setSelectedRoom(room); setRoomSearch(""); setRoomResults([]); }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-800 transition text-left"
+                          >
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center shrink-0">
+                              {room.imageUrl ? (
+                                <img src={room.imageUrl} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-xs text-zinc-400 font-medium">{room.name.charAt(0).toUpperCase()}</span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-white truncate">{room.name}</p>
+                              <p className="text-[10px] text-zinc-500">{room._count?.members || 0} members</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <p className="text-[10px] text-zinc-600">Optional — link this gig to a room</p>
               </div>
 
               {/* Location */}

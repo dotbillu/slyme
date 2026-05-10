@@ -27,7 +27,7 @@ function createAvatarIcon(avatarUrl: string) {
     className: "",
     html: `
       <div style="
-        width: 44px; height: 44px; border-radius: 50%;
+        width: 52px; height: 52px; border-radius: 50%;
         border: 3px solid #22c55e;
         overflow: hidden; background: #27272a;
         box-shadow: 0 2px 8px rgba(0,0,0,0.4);
@@ -35,9 +35,9 @@ function createAvatarIcon(avatarUrl: string) {
         <img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;" />
       </div>
     `,
-    iconSize: [44, 44],
-    iconAnchor: [22, 44],
-    popupAnchor: [0, -44],
+    iconSize: [52, 52],
+    iconAnchor: [26, 52],
+    popupAnchor: [0, -52],
   });
 }
 
@@ -45,21 +45,21 @@ const fallbackIcon = L.divIcon({
   className: "",
   html: `
     <div style="
-      width: 44px; height: 44px; border-radius: 50%;
+      width: 52px; height: 52px; border-radius: 50%;
       border: 3px solid #22c55e;
       background: #22c55e; display: flex;
       align-items: center; justify-content: center;
       box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     ">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
         <circle cx="12" cy="7" r="4"/>
       </svg>
     </div>
   `,
-  iconSize: [44, 44],
-  iconAnchor: [22, 44],
-  popupAnchor: [0, -44],
+  iconSize: [52, 52],
+  iconAnchor: [26, 52],
+  popupAnchor: [0, -52],
 });
 
 function createGigIcon(avatarUrl?: string | null) {
@@ -68,7 +68,7 @@ function createGigIcon(avatarUrl?: string | null) {
       className: "",
       html: `
         <div style="
-          width: 36px; height: 36px; border-radius: 50%;
+          width: 30px; height: 30px; border-radius: 50%;
           border: 2px solid #3b82f6;
           overflow: hidden; background: #27272a;
           box-shadow: 0 2px 8px rgba(59,130,246,0.4);
@@ -76,30 +76,30 @@ function createGigIcon(avatarUrl?: string | null) {
           <img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;" />
         </div>
       `,
-      iconSize: [36, 36],
-      iconAnchor: [18, 36],
-      popupAnchor: [0, -36],
+      iconSize: [30, 30],
+      iconAnchor: [15, 30],
+      popupAnchor: [0, -30],
     });
   }
   return L.divIcon({
     className: "",
     html: `
       <div style="
-        width: 36px; height: 36px; border-radius: 50%;
+        width: 30px; height: 30px; border-radius: 50%;
         border: 2px solid #3b82f6;
         background: #3b82f6; display: flex;
         align-items: center; justify-content: center;
         box-shadow: 0 2px 8px rgba(59,130,246,0.4);
       ">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
           <circle cx="12" cy="10" r="3"/>
         </svg>
       </div>
     `,
-    iconSize: [36, 36],
-    iconAnchor: [18, 36],
-    popupAnchor: [0, -36],
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -30],
   });
 }
 
@@ -109,7 +109,7 @@ function createRoomIcon(imageUrl?: string | null) {
       className: "",
       html: `
         <div style="
-          width: 40px; height: 40px; border-radius: 50%;
+          width: 38px; height: 38px; border-radius: 50%;
           border: 3px solid #a855f7;
           overflow: hidden; background: #27272a;
           box-shadow: 0 2px 8px rgba(168,85,247,0.4);
@@ -117,22 +117,22 @@ function createRoomIcon(imageUrl?: string | null) {
           <img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;" />
         </div>
       `,
-      iconSize: [40, 40],
-      iconAnchor: [20, 40],
-      popupAnchor: [0, -40],
+      iconSize: [38, 38],
+      iconAnchor: [19, 38],
+      popupAnchor: [0, -38],
     });
   }
   return L.divIcon({
     className: "",
     html: `
       <div style="
-        width: 40px; height: 40px; border-radius: 50%;
+        width: 38px; height: 38px; border-radius: 50%;
         border: 3px solid #a855f7;
         background: #a855f7; display: flex;
         align-items: center; justify-content: center;
         box-shadow: 0 2px 8px rgba(168,85,247,0.4);
       ">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
           <circle cx="9" cy="7" r="4"/>
           <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -140,9 +140,9 @@ function createRoomIcon(imageUrl?: string | null) {
         </svg>
       </div>
     `,
-    iconSize: [40, 40],
-    iconAnchor: [20, 40],
-    popupAnchor: [0, -40],
+    iconSize: [38, 38],
+    iconAnchor: [19, 38],
+    popupAnchor: [0, -38],
   });
 }
 
@@ -273,7 +273,7 @@ const Map = memo(
         {userLocation && (
           <>
             <MapSetup lat={userLocation.lat} lng={userLocation.lng} />
-            <Marker position={[userLocation.lat, userLocation.lng]} icon={icon}>
+            <Marker position={[userLocation.lat, userLocation.lng]} icon={icon} zIndexOffset={100}>
               <Popup>
                 <span style={{ color: "#000" }}>You are here</span>
               </Popup>
@@ -291,6 +291,7 @@ const Map = memo(
               key={gig.id}
               position={[gig.latitude, gig.longitude]}
               icon={gigIcon}
+              zIndexOffset={500}
               eventHandlers={{
                 click: () => onGigClick?.(gig),
               }}
@@ -323,6 +324,7 @@ const Map = memo(
               key={`room-${room.id}`}
               position={[room.latitude, room.longitude]}
               icon={roomIcon}
+              zIndexOffset={300}
               eventHandlers={{
                 click: () => onRoomClick?.(room),
               }}

@@ -7,6 +7,8 @@ import { ArrowLeft, ArrowRight, MapPin, Pencil, Loader2, Check, Upload, X } from
 import { useAuth } from "@/app/AuthProvider"
 import { CreateRoomPayload } from "@/types/room"
 import { createRoom } from "@/services/room/service"
+import { useSetAtom } from "jotai"
+import { roomsLoadedAtom } from "@/lib/atom"
 import LocationPickerView from "../components/LocationPickerView"
 
 type View = "step1" | "step2" | "locationPicker"
@@ -41,6 +43,7 @@ async function uploadFile(file: File): Promise<string> {
 export default function CreateRoomPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const setRoomsLoaded = useSetAtom(roomsLoadedAtom)
   const [view, setView] = useState<View>("step1")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -171,6 +174,7 @@ export default function CreateRoomPage() {
       }
       const room = await createRoom(payload)
       setSuccess(true)
+      setRoomsLoaded(false)
       setTimeout(() => router.push(`/network/${room.id}`), 1000)
     } catch (err: any) {
       setError(err.message || "Failed to create room")

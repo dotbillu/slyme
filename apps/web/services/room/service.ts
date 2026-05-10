@@ -1,6 +1,6 @@
 import { API_BASE } from "@/lib/config";
 import { handleResponse } from "@/services/helper/service";
-import { Room, RoomWithMessages, Message, CreateRoomPayload } from "@/types/room";
+import { Room, RoomWithMessages, Message, CreateRoomPayload, UpdateRoomPayload } from "@/types/room";
 
 export async function fetchAllRooms(): Promise<Room[]> {
   const res = await fetch(`${API_BASE}/rooms/all`, {
@@ -58,6 +58,17 @@ export async function joinRoom(id: string): Promise<Room> {
   const res = await fetch(`${API_BASE}/rooms/${id}/join`, {
     method: "POST",
     credentials: "include",
+  });
+
+  return handleResponse(res);
+}
+
+export async function updateRoom(id: string, payload: UpdateRoomPayload): Promise<Room> {
+  const res = await fetch(`${API_BASE}/rooms/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
 
   return handleResponse(res);

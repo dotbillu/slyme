@@ -19,6 +19,11 @@ export interface Gig {
     name: string | null;
     avatarUrl: string | null;
   };
+  room?: {
+    id: string;
+    name: string;
+    imageUrl: string | null;
+  } | null;
 }
 
 export interface CreateGigPayload {
@@ -46,6 +51,7 @@ export interface UpdateGigPayload {
   expiresAt?: string;
   type?: string;
   imageUrls?: string[];
+  roomId?: string | null;
 }
 
 export const GIG_TYPES = [

@@ -51,6 +51,13 @@ export async function getGigs(skip = 0, take = 10) {
     },
     include: {
       createdBy: true,
+      room: {
+        select: {
+          id: true,
+          name: true,
+          imageUrl: true,
+        },
+      },
     },
   });
 }
@@ -69,6 +76,7 @@ export async function updateGig(
     expiresAt: string;
     type: string;
     imageUrls: string[];
+    roomId: string | null;
   }>,
 ) {
   const gig = await prisma.gig.findUnique({
@@ -78,15 +86,26 @@ export async function updateGig(
   if (!gig) throw new Error("Gig not found");
   if (gig.creatorId !== userId) throw new Error("Unauthorized");
 
+  const { roomId, ...rest } = data;
+
   return prisma.gig.update({
     where: { id: gigId },
     data: {
-      ...data,
-      latitude: data.latitude ? Number(data.latitude) : undefined,
-      longitude: data.longitude ? Number(data.longitude) : undefined,
-      date: data.date ? new Date(data.date) : undefined,
-      gigTime: data.gigTime ? new Date(data.gigTime) : undefined,
-      expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
+      ...rest,
+      latitude: rest.latitude ? Number(rest.latitude) : undefined,
+      longitude: rest.longitude ? Number(rest.longitude) : undefined,
+      date: rest.date ? new Date(rest.date) : undefined,
+      gigTime: rest.gigTime ? new Date(rest.gigTime) : undefined,
+      expiresAt: rest.expiresAt ? new Date(rest.expiresAt) : undefined,
+      ...(roomId !== undefined
+        ? roomId
+          ? { room: { connect: { id: roomId } } }
+          : { room: { disconnect: true } }
+        : {}),
+    },
+    include: {
+      createdBy: true,
+      room: true,
     },
   });
 }
@@ -95,7 +114,13 @@ export async function getGigById(gigId: string) {
     where: { id: gigId },
     include: {
       createdBy: true,
-      room: true,
+      room: {
+        select: {
+          id: true,
+          name: true,
+          imageUrl: true,
+        },
+      },
     },
   });
 }

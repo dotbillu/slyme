@@ -7,6 +7,8 @@ import { Search as SearchIcon, X, Users, MapPin, User as UserIcon, Loader2 } fro
 import { useAuth } from "@/app/AuthProvider"
 import { socket } from "@/lib/socket"
 import { joinRoom } from "@/services/room/service"
+import { useSetAtom } from "jotai"
+import { roomsLoadedAtom } from "@/lib/atom"
 
 interface SearchUser {
   id: string
@@ -50,6 +52,7 @@ type Tab = "all" | "users" | "rooms" | "gigs"
 export default function SearchPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const setRoomsLoaded = useSetAtom(roomsLoadedAtom)
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<SearchResults | null>(null)
   const [loading, setLoading] = useState(false)
@@ -101,8 +104,9 @@ export default function SearchPage() {
     try {
       if (user) await joinRoom(room.id)
     } catch {}
+    setRoomsLoaded(false)
     router.push(`/network/${room.id}`)
-  }, [user, router])
+  }, [user, router, setRoomsLoaded])
 
   const handleGigClick = useCallback((gig: SearchGig) => {
     router.push(`/explore?gig=${gig.id}`)
