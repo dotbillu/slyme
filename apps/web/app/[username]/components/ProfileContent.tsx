@@ -194,7 +194,7 @@ export default function ProfileClient({ user: initialUser }: { user: UserPublic 
             {isOwner && !isEditing && (
               <button 
                 onClick={() => setIsEditing(true)}
-                className="mt-12 p-2 rounded-full bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 transition border border-zinc-800 hover:border-zinc-700"
+                className="mt-12 p-2 text-zinc-400 hover:text-white  transition "
               >
                 <Pencil size={16} />
               </button>
