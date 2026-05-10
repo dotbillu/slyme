@@ -84,3 +84,18 @@ nav {
   scrollbar-width: thin;
   scrollbar-color: #3f3f46 transparent;
 }
+
+/* Navbar Global Clean-up */
+nav button, 
+nav a,
+nav [role="button"] {
+  outline: none !important;
+  text-decoration: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+nav button:focus, 
+nav a:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}

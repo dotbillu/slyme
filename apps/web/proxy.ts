@@ -10,7 +10,6 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/signin") || pathname.startsWith("/signup");
 
   const isProtected =
-    pathname === "/" ||
     pathname === "/get-started" ||
     pathname.startsWith("/network") ||
     pathname.startsWith("/create");
@@ -27,5 +26,12 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/signin", "/signup", "/get-started", "/create/:path", "/network/:path"],
+  matcher: [
+    "/",
+    "/signin",
+    "/signup",
+    "/get-started",
+    "/create/:path",
+    "/network/:path",
+  ],
 };

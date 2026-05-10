@@ -139,28 +139,28 @@ export default function Navbar() {
   if (!user) {
     return !isAuthPage ? (
       <div className="fixed top-0 left-0 w-full z-[1900]">
-        <div className="relative w-full px-5 h-20 flex items-center justify-between bg-gradient-to-b from-black/50 via-black/30 to-transparent backdrop-blur-md">
-          <div className="flex items-center gap-3 ">
-            <Image src="/slymelogo.png" alt="logo" width={50} height={28} />
+        <div className="relative w-full px-5 h-20 flex items-center justify-between bg-black/20 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <Image src="/slymelogo.png" alt="logo" width={42} height={24} className="object-contain" />
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/signin")}
-              className="text-[17px] px-4 py-2 rounded-lg bg-[#5cb038] text-white font-bold "
+              className="text-[14px] sm:text-[15px] px-5 py-2 rounded-xl bg-[#5cb038] text-white font-black uppercase tracking-tight shadow-lg shadow-[#5cb038]/20 active:scale-95 transition-all"
             >
               Sign in
             </button>
 
             <button
               onClick={() => router.push("/signup")}
-              className="text-[17px] px-3 py-1.5 rounded-lg  text-white  hover:underline font-bold"
+              className="text-[14px] sm:text-[15px] px-4 py-2 rounded-xl text-white/70 hover:text-white font-black uppercase tracking-tight hover:bg-white/5 transition-all"
             >
               Sign Up
             </button>
           </div>
 
-          <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/40 to-transparent" />
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/60 via-black/20 to-transparent" />
         </div>
       </div>
     ) : null;

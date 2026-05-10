@@ -232,9 +232,19 @@ const Map = forwardRef<MapHandle, MapProps>(function Map(
     <MapContainer
       center={center}
       zoom={15}
+      minZoom={3}
+      maxZoom={18}
       scrollWheelZoom={true}
+      wheelDebounceTime={150}
+      wheelPxPerZoomLevel={120}
       zoomControl={false}
       preferCanvas={true}
+      worldCopyJump={false}
+      maxBounds={[
+        [-90, -180],
+        [90, 180],
+      ]}
+      maxBoundsViscosity={1.0}
       style={{ height: "100%", width: "100%" }}
       ref={(map) => {
         if (map) setMapInstance(map);
@@ -244,6 +254,7 @@ const Map = forwardRef<MapHandle, MapProps>(function Map(
       <TileLayer
         attribution="&copy; OpenStreetMap contributors"
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        noWrap={true}
         keepBuffer={12}
         updateWhenZooming={false}
         updateWhenIdle={true}

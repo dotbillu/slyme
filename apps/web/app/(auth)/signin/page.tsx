@@ -27,7 +27,7 @@ export default function Login() {
 
   useEffect(() => {
     if (checked && user) {
-      router.replace("/");
+      router.replace("/explore");
     }
   }, [checked, user, router]);
 
@@ -40,7 +40,7 @@ export default function Login() {
       const user = await CredentialSignIn(details.username, details.password);
 
       setUser(user);
-      router.replace("/");
+      router.replace("/explore");
     } catch (err: any) {
       setOauthError(null);
       setCredError(err.message);
@@ -59,7 +59,7 @@ export default function Login() {
       const user = await oauthSignIn(token);
 
       setUser(user);
-      window.location.replace("/");
+      window.location.replace("/explore");
     } catch (err: any) {
       setCredError(null);
       setOauthError(err.message);
