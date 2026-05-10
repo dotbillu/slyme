@@ -1,4 +1,3 @@
-import { Network } from "lucide-react";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -14,11 +13,18 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/network") ||
     pathname.startsWith("/create");
 
+  // Debug logging for production troubleshooting
+  if (isProtected || isAuthPage) {
+    console.log(`[Middleware] Path: ${pathname}, HasToken: ${!!token}`);
+  }
+
   if (!token && isProtected && !isAuthPage) {
+    console.log(`[Middleware] Redirecting to /signin - Protected path without token`);
     return NextResponse.redirect(new URL("/signin", req.url));
   }
 
   if (token && isAuthPage) {
+    console.log(`[Middleware] Redirecting to / - Auth page with token`);
     return NextResponse.redirect(new URL("/", req.url));
   }
 
@@ -31,7 +37,7 @@ export const config = {
     "/signin",
     "/signup",
     "/get-started",
-    "/create/:path",
-    "/network/:path",
+    "/create/:path*",
+    "/network/:path*",
   ],
 };
