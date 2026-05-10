@@ -28,7 +28,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [unseenCount, setUnseenCount] = useAtom(unseenCountAtom);
-  const { user } = useAuth();
+  const { user, checked } = useAuth();
   const createRef = useRef<HTMLDivElement>(null);
   const socketInitRef = useRef(false);
 
@@ -67,6 +67,7 @@ export default function Navbar() {
     }
   }, [user, setUnseenCount]);
   const isAuthPage = pathname === "/signin" || pathname === "/signup";
+  if(!checked)return null
   if (!user) {
     return !isAuthPage ? (
       <div className="fixed top-0 left-0 w-full z-[2000]">
