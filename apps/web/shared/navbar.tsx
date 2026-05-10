@@ -20,7 +20,20 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAtom } from "jotai";
 import { useAuth } from "@/app/AuthProvider";
 import { socket } from "@/lib/socket";
-import { unseenCountAtom } from "@/lib/atom";
+import {
+  unseenCountAtom,
+  roomsAtom,
+  roomsLoadedAtom,
+  exploreGigsAtom,
+  exploreGigsLoadedAtom,
+  exploreRoomsAtom,
+  exploreRoomsLoadedAtom,
+  currentUserProfileAtom,
+} from "@/lib/atom";
+import { fetchUserRooms } from "@/services/room/service";
+import { fetchAllGigs } from "@/services/gig/service";
+import { fetchAllRooms } from "@/services/room/service";
+import { fetchProfile } from "@/services/user/service";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -28,6 +41,13 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [unseenCount, setUnseenCount] = useAtom(unseenCountAtom);
+  const [roomsLoaded, setRoomsLoaded] = useAtom(roomsLoadedAtom);
+  const [, setRooms] = useAtom(roomsAtom);
+  const [exploreGigsLoaded, setExploreGigsLoaded] = useAtom(exploreGigsLoadedAtom);
+  const [, setExploreGigs] = useAtom(exploreGigsAtom);
+  const [exploreRoomsLoaded, setExploreRoomsLoaded] = useAtom(exploreRoomsLoadedAtom);
+  const [, setExploreRooms] = useAtom(exploreRoomsAtom);
+  const [currentUserProfile, setCurrentUserProfile] = useAtom(currentUserProfileAtom);
   const { user, checked } = useAuth();
   const createRef = useRef<HTMLDivElement>(null);
   const socketInitRef = useRef(false);
@@ -66,6 +86,38 @@ export default function Navbar() {
       socket.emit("get_unseen_count");
     }
   }, [user, setUnseenCount]);
+
+  // Prefetch data for Explore and Network pages
+  useEffect(() => {
+    if (!user) return;
+    
+    if (!roomsLoaded) {
+      fetchUserRooms().then((data) => {
+        setRooms(data);
+        setRoomsLoaded(true);
+      }).catch(() => {});
+    }
+
+    if (!exploreGigsLoaded) {
+      fetchAllGigs().then((data) => {
+        setExploreGigs(data);
+        setExploreGigsLoaded(true);
+      }).catch(() => {});
+    }
+
+    if (!exploreRoomsLoaded) {
+      fetchAllRooms().then((data) => {
+        setExploreRooms(data);
+        setExploreRoomsLoaded(true);
+      }).catch(() => {});
+    }
+
+    if (!currentUserProfile) {
+      fetchProfile(user.username).then((data) => {
+        setCurrentUserProfile(data);
+      }).catch(() => {});
+    }
+  }, [user, roomsLoaded, exploreGigsLoaded, exploreRoomsLoaded, currentUserProfile, setRooms, setRoomsLoaded, setExploreGigs, setExploreGigsLoaded, setExploreRooms, setExploreRoomsLoaded, setCurrentUserProfile]);
   const isAuthPage = pathname === "/signin" || pathname === "/signup";
   if (!checked) return null;
   if (!user) {
@@ -194,6 +246,7 @@ export default function Navbar() {
                 <Link
                   key={k}
                   href={i.href}
+                  prefetch={true}
                   className="relative flex items-center gap-4 px-3 py-2 rounded-xl transition hover:bg-white/30"
                 >
                   <div className="relative min-w-6.5 max-w-6.5">
@@ -224,6 +277,7 @@ export default function Navbar() {
               <Link
                 key={k}
                 href={i.href}
+                prefetch={true}
                 className="flex items-center gap-4 px-3 py-2 rounded-xl transition hover:bg-white/30"
               >
                 <Icon
@@ -314,6 +368,7 @@ export default function Navbar() {
                 <Link
                   key={k}
                   href={i.href}
+                  prefetch={true}
                   className={`relative flex items-center justify-center ${
                     isActive ? "text-white" : "text-zinc-400"
                   }`}
@@ -334,6 +389,7 @@ export default function Navbar() {
               <Link
                 key={k}
                 href={i.href}
+                prefetch={true}
                 className={`flex items-center justify-center ${
                   isActive ? "text-white" : "text-zinc-400"
                 }`}

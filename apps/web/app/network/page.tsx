@@ -18,7 +18,6 @@ export default function NetworkPage() {
   const [roomsLoaded, setRoomsLoaded] = useAtom(roomsLoadedAtom);
   const roomIdsRef = useRef<string[]>([]);
 
-  // Fetch rooms only if not already loaded
   useEffect(() => {
     if (!user || roomsLoaded) return;
     fetchUserRooms()
@@ -30,12 +29,10 @@ export default function NetworkPage() {
       .catch(() => {});
   }, [user, roomsLoaded, setRooms, setRoomsLoaded]);
 
-  // Keep ref in sync when rooms change (e.g. from atom)
   useEffect(() => {
     roomIdsRef.current = rooms.map((r) => r.id);
   }, [rooms]);
 
-  // Socket — join all rooms for live updates (socket is managed by navbar)
   useEffect(() => {
     if (!user || rooms.length === 0) return;
 

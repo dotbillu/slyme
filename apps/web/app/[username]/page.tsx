@@ -1,6 +1,7 @@
+import { Suspense } from "react";
 import { fetchProfile } from "@/services/user/service";
-import ProfileClient from "./components/ProfileContent";
-import { UserPublic } from "@/types/user";
+import ProfileLoader from "./components/ProfileLoader";
+import ProfileSkeleton from "./components/ProfileSkeleton";
 
 export default async function ProfilePage({
   params,
@@ -8,8 +9,11 @@ export default async function ProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
+  const userPromise = fetchProfile(username);
 
-  const user: UserPublic = await fetchProfile(username);
-
-  return <ProfileClient user={user} />;
+  return (
+    <Suspense fallback={<ProfileSkeleton />}>
+      <ProfileLoader userPromise={userPromise} username={username} />
+    </Suspense>
+  );
 }

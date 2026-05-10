@@ -12,6 +12,13 @@ import { Room } from "@/types/room";
 import { fetchAllGigs, fetchGigById } from "@/services/gig/service";
 import { fetchAllRooms, fetchRoomById, joinRoom } from "@/services/room/service";
 import ShareMenu from "@/app/explore/components/ShareMenu";
+import { useAtom } from "jotai";
+import {
+  exploreGigsAtom,
+  exploreGigsLoadedAtom,
+  exploreRoomsAtom,
+  exploreRoomsLoadedAtom,
+} from "@/lib/atom";
 
 const Map = dynamic(() => import("@/app/explore/components/Map"), { ssr: false });
 const GigDetail = dynamic(() => import("@/app/explore/components/GigDetail"), { ssr: false });
@@ -23,11 +30,13 @@ export default function ExplorePage() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // Gigs state
-  const [gigs, setGigs] = useState<Gig[]>([]);
+  const [gigs, setGigs] = useAtom(exploreGigsAtom);
+  const [gigsLoaded, setGigsLoaded] = useAtom(exploreGigsLoadedAtom);
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
 
   // Rooms state
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [rooms, setRooms] = useAtom(exploreRoomsAtom);
+  const [roomsLoaded, setRoomsLoaded] = useAtom(exploreRoomsLoadedAtom);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [joining, setJoining] = useState(false);
 
@@ -36,25 +45,29 @@ export default function ExplorePage() {
 
   // Fetch all gigs
   const loadGigs = useCallback(async () => {
+    if (gigsLoaded) return gigs;
     try {
       const data = await fetchAllGigs();
       setGigs(data);
+      setGigsLoaded(true);
       return data;
     } catch {
       return [];
     }
-  }, []);
+  }, [gigsLoaded, gigs, setGigs, setGigsLoaded]);
 
   // Fetch all rooms
   const loadRooms = useCallback(async () => {
+    if (roomsLoaded) return rooms;
     try {
       const data = await fetchAllRooms();
       setRooms(data);
+      setRoomsLoaded(true);
       return data;
     } catch {
       return [];
     }
-  }, []);
+  }, [roomsLoaded, rooms, setRooms, setRoomsLoaded]);
 
   useEffect(() => {
     const init = async () => {
