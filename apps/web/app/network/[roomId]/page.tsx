@@ -10,6 +10,8 @@ import { roomsAtom, roomsLoadedAtom } from "@/lib/atom"
 import { Message } from "@/types/room"
 import RoomSidebar from "./components/RoomSidebar"
 import ChatArea from "./components/ChatArea"
+import { useLiveQuery } from "dexie-react-hooks"
+import { db } from "@/lib/db"
 
 export default function RoomChatPage() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -19,7 +21,12 @@ export default function RoomChatPage() {
   const [rooms, setRooms] = useAtom(roomsAtom)
   const [roomsLoaded, setRoomsLoaded] = useAtom(roomsLoadedAtom)
 
-  const [messages, setMessages] = useState<Message[]>([])
+  const messages = useLiveQuery(
+    () => db.messages.where("roomId").equals(roomId).sortBy("createdAt"),
+    [roomId],
+    []
+  )
+  
   const [connected, setConnected] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loadingOlder, setLoadingOlder] = useState(false)
@@ -70,20 +77,19 @@ export default function RoomChatPage() {
       setConnected(false)
     }
 
-    const handleRoomMessages = ({ roomId: rid, messages: msgs }: { roomId: string; messages: Message[] }) => {
+    const handleRoomMessages = async ({ roomId: rid, messages: msgs }: { roomId: string; messages: Message[] }) => {
+      if (msgs.length > 0) {
+        await db.messages.bulkPut(msgs)
+      }
       if (rid === activeRoomRef.current) {
-        setMessages(msgs)
         setHasMore(msgs.length >= 50)
         socket.emit("mark_seen", { roomId: rid })
       }
     }
 
-    const handleReceiveMessage = (msg: Message) => {
+    const handleReceiveMessage = async (msg: Message) => {
+      await db.messages.put(msg)
       if (msg.roomId === activeRoomRef.current) {
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === msg.id)) return prev
-          return [...prev, msg]
-        })
         socket.emit("mark_seen", { roomId: msg.roomId })
       } else {
         setRooms((prev) =>
@@ -144,11 +150,7 @@ export default function RoomChatPage() {
       const olderMsgs = await fetchRoomMessages(roomId, messages.length, 50)
       if (olderMsgs.length < 50) setHasMore(false)
       if (olderMsgs.length > 0) {
-        setMessages((prev) => {
-          const existingIds = new Set(prev.map((m) => m.id))
-          const newMsgs = olderMsgs.filter((m) => !existingIds.has(m.id))
-          return [...newMsgs, ...prev]
-        })
+        await db.messages.bulkPut(olderMsgs)
       }
     } catch {}
     setLoadingOlder(false)
@@ -157,7 +159,6 @@ export default function RoomChatPage() {
   const handleRoomSelect = useCallback(
     (id: string) => {
       if (id === roomId) return
-      setMessages([])
       setHasMore(true)
       setSidebarOpen(false)
       setRooms((prev) =>

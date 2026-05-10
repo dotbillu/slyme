@@ -16,7 +16,6 @@ export default function RoomSidebar({
   activeRoomId,
   onRoomSelect,
 }: RoomSidebarProps) {
-  // Sort: unread first, then by latest message
   const sortedRooms = [...rooms].sort((a, b) => {
     if ((a.unreadCount || 0) > 0 && (b.unreadCount || 0) === 0) return -1
     if ((a.unreadCount || 0) === 0 && (b.unreadCount || 0) > 0) return 1
@@ -32,7 +31,6 @@ export default function RoomSidebar({
         <h2 className="text-lg font-bold text-white">Messages</h2>
       </div>
 
-      {/* Room list */}
       <div className="flex-1 overflow-y-auto">
         {rooms.length === 0 ? (
           <div className="divide-y divide-zinc-800/30">
