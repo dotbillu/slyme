@@ -9,6 +9,8 @@ import { CreateGigPayload } from "@/types/gig"
 import { createGig } from "@/services/gig/service"
 import { socket } from "@/lib/socket"
 import { Room } from "@/types/room"
+import { useSetAtom } from "jotai"
+import { exploreGigsLoadedAtom, exploreRoomsLoadedAtom } from "@/lib/atom"
 import LocationPickerView from "../components/LocationPickerView"
 
 type View = "step1" | "step2" | "locationPicker"
@@ -36,6 +38,8 @@ async function uploadFile(file: File): Promise<string> {
 export default function CreateGigPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const setExploreGigsLoaded = useSetAtom(exploreGigsLoadedAtom)
+  const setExploreRoomsLoaded = useSetAtom(exploreRoomsLoadedAtom)
   const [view, setView] = useState<View>("step1")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -210,7 +214,9 @@ export default function CreateGigPage() {
       }
       await createGig(payload)
       setSuccess(true)
-      setTimeout(() => router.push("/explore"), 1000)
+      setExploreGigsLoaded(false)
+      setExploreRoomsLoaded(false)
+      setTimeout(() => router.push("/explore?created=true"), 1000)
     } catch (err: any) {
       setError(err.message || "Failed to create gig")
     } finally {

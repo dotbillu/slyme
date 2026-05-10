@@ -8,7 +8,7 @@ import { useAuth } from "@/app/AuthProvider"
 import { CreateRoomPayload } from "@/types/room"
 import { createRoom } from "@/services/room/service"
 import { useSetAtom } from "jotai"
-import { roomsLoadedAtom } from "@/lib/atom"
+import { roomsLoadedAtom, exploreRoomsLoadedAtom, exploreGigsLoadedAtom } from "@/lib/atom"
 import LocationPickerView from "../components/LocationPickerView"
 
 type View = "step1" | "step2" | "locationPicker"
@@ -44,6 +44,8 @@ export default function CreateRoomPage() {
   const { user } = useAuth()
   const router = useRouter()
   const setRoomsLoaded = useSetAtom(roomsLoadedAtom)
+  const setExploreRoomsLoaded = useSetAtom(exploreRoomsLoadedAtom)
+  const setExploreGigsLoaded = useSetAtom(exploreGigsLoadedAtom)
   const [view, setView] = useState<View>("step1")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -175,6 +177,8 @@ export default function CreateRoomPage() {
       const room = await createRoom(payload)
       setSuccess(true)
       setRoomsLoaded(false)
+      setExploreRoomsLoaded(false)
+      setExploreGigsLoaded(false)
       setTimeout(() => router.push(`/network/${room.id}`), 1000)
     } catch (err: any) {
       setError(err.message || "Failed to create room")
