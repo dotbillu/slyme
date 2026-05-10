@@ -11,22 +11,16 @@ import {
   LogIn,
   MapPin,
   Pencil,
-  Trash2,
-  Loader2,
-  Check,
   ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/app/AuthProvider";
 import { Gig } from "@/types/gig";
 import { Room } from "@/types/room";
-import { UpdateRoomPayload } from "@/types/room";
 import { fetchAllGigs, fetchGigById } from "@/services/gig/service";
 import {
   fetchAllRooms,
   fetchRoomById,
   joinRoom,
-  updateRoom,
-  deleteRoom,
 } from "@/services/room/service";
 import ShareMenu from "@/app/explore/components/ShareMenu";
 import { useAtom, useSetAtom } from "jotai";
@@ -45,17 +39,7 @@ const Map = dynamic(() => import("@/app/explore/components/Map"), {
 const GigDetail = dynamic(() => import("@/app/explore/components/GigDetail"), {
   ssr: false,
 });
-
-async function uploadFile(file: File): Promise<string> {
-  const formData = new FormData();
-  formData.append("file", file);
-  const res = await fetch("/api/upload", { method: "POST", body: formData });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || "Upload failed");
-  }
-  return (await res.json()).url;
-}
+import EditRoomModal from "@/app/explore/components/EditRoomModal";
 
 export default function ExplorePage() {
   const { user } = useAuth();
@@ -384,169 +368,51 @@ function RoomPanel({
 }) {
   const memberCount = room._count?.members || room.members?.length || 0;
   const [isMobile, setIsMobile] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
-  // Edit form state
-  const [editName, setEditName] = useState(room.name);
-  const [editDescription, setEditDescription] = useState(
-    room.description || "",
-  );
-  const [editType, setEditType] = useState(room.type || "");
-  const [editImageUrl, setEditImageUrl] = useState(room.imageUrl || "");
+  const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
+    if (showEdit) return;
     const check = () => setIsMobile(window.innerWidth < 1024);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
-  }, []);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const payload: UpdateRoomPayload = {};
-      if (editName !== room.name) payload.name = editName;
-      if (editDescription !== (room.description || ""))
-        payload.description = editDescription;
-      if (editType !== (room.type || "")) payload.type = editType;
-      if (editImageUrl !== (room.imageUrl || ""))
-        payload.imageUrl = editImageUrl;
-
-      const updated = await updateRoom(room.id, payload);
-      onUpdated(updated);
-      setEditing(false);
-    } catch {
-      // silently fail
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await deleteRoom(room.id);
-      onDeleted(room.id);
-    } catch {
-      setDeleting(false);
-      setConfirmDelete(false);
-    }
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const url = await uploadFile(file);
-      setEditImageUrl(url);
-    } catch {
-      // silently fail
-    } finally {
-      setUploading(false);
-    }
-  };
+  }, [showEdit]);
 
   const panelContent = (
     <div className="flex flex-col h-full relative">
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto scrollbar-hide py-4">
         {/* Image */}
-        <div className="mx-4 rounded-xl overflow-hidden aspect-[16/10] bg-zinc-900 relative">
-          {editing ? (
-            <label className="w-full h-full flex items-center justify-center cursor-pointer hover:bg-zinc-800 transition">
-              {uploading ? (
-                <Loader2 size={24} className="animate-spin text-zinc-500" />
-              ) : editImageUrl ? (
-                <img
-                  src={editImageUrl}
-                  alt={editName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-sm text-zinc-500">
-                  Click to upload image
-                </span>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageUpload}
-                disabled={uploading}
-              />
-            </label>
-          ) : room.imageUrl ? (
-            <img
-              src={room.imageUrl}
-              alt={room.name}
-              className="w-full h-full object-cover"
-            />
+        <div className="mx-4 rounded-xl overflow-hidden aspect-[16/10] bg-zinc-900">
+          {room.imageUrl ? (
+            <img src={room.imageUrl} alt={room.name} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
-              <span className="text-6xl font-light text-zinc-700">
-                {room.name.charAt(0).toUpperCase()}
-              </span>
+              <span className="text-6xl font-light text-zinc-700">{room.name.charAt(0).toUpperCase()}</span>
             </div>
           )}
         </div>
 
         {/* Title + share */}
         <div className="px-6 pt-4 pb-1 flex items-start justify-between gap-3">
-          {editing ? (
-            <input
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              className="text-2xl font-normal text-white leading-snug flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 outline-none focus:border-zinc-500"
-              placeholder="Room name"
-            />
-          ) : (
-            <h2 className="text-2xl font-normal text-white leading-snug flex-1">
-              {room.name}
-            </h2>
-          )}
+          <h2 className="text-2xl font-normal text-white leading-snug flex-1">{room.name}</h2>
           <div className="shrink-0 mt-1">
             <ShareMenu type="room" id={room.id} isLoggedIn={isLoggedIn} />
           </div>
         </div>
 
-        {/* Description below title */}
-        {editing ? (
+        {/* Description */}
+        {room.description && (
           <div className="px-6 pb-3">
-            <textarea
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              className="text-sm text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 w-full outline-none focus:border-zinc-500 resize-none"
-              rows={3}
-              placeholder="Description"
-            />
+            <p className="text-sm text-zinc-400 leading-relaxed">{room.description}</p>
           </div>
-        ) : room.description ? (
-          <div className="px-6 pb-3">
-            <p className="text-sm text-zinc-400 leading-relaxed">
-              {room.description}
-            </p>
-          </div>
-        ) : null}
+        )}
 
         {/* Type capsule + members */}
         <div className="px-6 pb-3 flex items-center gap-2 flex-wrap">
-          {editing ? (
-            <input
-              value={editType}
-              onChange={(e) => setEditType(e.target.value)}
-              className="text-sm text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 outline-none focus:border-zinc-500"
-              placeholder="Room type (e.g. Gaming, Music)"
-            />
-          ) : room.type ? (
-            <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300 font-medium">
-              {room.type}
-            </span>
-          ) : null}
+          {room.type && (
+            <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300 font-medium">{room.type}</span>
+          )}
           <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300 font-medium flex items-center gap-1.5">
             <Users size={12} className="text-zinc-500" />
             {memberCount} {memberCount === 1 ? "member" : "members"}
@@ -560,22 +426,14 @@ function RoomPanel({
         {room.createdBy && (
           <div className="px-6 py-3 flex items-center gap-3">
             {room.createdBy.avatarUrl ? (
-              <img
-                src={room.createdBy.avatarUrl}
-                className="w-8 h-8 rounded-full object-cover"
-                alt=""
-              />
+              <img src={room.createdBy.avatarUrl} className="w-8 h-8 rounded-full object-cover" alt="" />
             ) : (
               <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-sm text-zinc-400">
-                {(room.createdBy.username ||
-                  room.createdBy.name ||
-                  "?")[0].toUpperCase()}
+                {(room.createdBy.username || room.createdBy.name || "?")[0].toUpperCase()}
               </div>
             )}
             <div>
-              <p className="text-sm text-white">
-                {room.createdBy.username || room.createdBy.name || "Anonymous"}
-              </p>
+              <p className="text-sm text-white">{room.createdBy.username || room.createdBy.name || "Anonymous"}</p>
               <p className="text-xs text-zinc-500">Creator</p>
             </div>
           </div>
@@ -584,44 +442,17 @@ function RoomPanel({
         <div className="h-6" />
       </div>
 
-      {/* Bottom action buttons */}
+      {/* Bottom action */}
       <div className="px-6 py-4 shrink-0">
         {isOwner ? (
-          editing ? (
-            <div className="flex gap-2">
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={handleSave}
-                disabled={saving}
-                className="flex-1 py-3 rounded-full bg-white hover:bg-zinc-200 text-black font-medium text-sm flex items-center justify-center gap-2 transition disabled:opacity-50"
-              >
-                {saving ? (
-                  <Loader2 size={15} className="animate-spin" />
-                ) : (
-                  <>
-                    <Check size={15} />
-                    Save
-                  </>
-                )}
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setConfirmDelete(true)}
-                className="w-12 py-3 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 flex items-center justify-center transition"
-              >
-                <Trash2 size={15} />
-              </motion.button>
-            </div>
-          ) : (
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setEditing(true)}
-              className="w-full py-3 rounded-full bg-white hover:bg-zinc-200 text-black font-medium text-sm flex items-center justify-center gap-2 transition"
-            >
-              <Pencil size={15} />
-              Edit Room
-            </motion.button>
-          )
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setShowEdit(true)}
+            className="w-full py-3 rounded-full bg-white hover:bg-zinc-200 text-black font-medium text-sm flex items-center justify-center gap-2 transition"
+          >
+            <Pencil size={15} />
+            Edit Room
+          </motion.button>
         ) : (
           <motion.button
             whileTap={{ scale: 0.97 }}
@@ -640,55 +471,6 @@ function RoomPanel({
           </motion.button>
         )}
       </div>
-
-      {/* Delete confirmation modal */}
-      <AnimatePresence>
-        {confirmDelete && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm"
-              onClick={() => setConfirmDelete(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed z-[2001] inset-x-6 top-1/2 -translate-y-1/2 mx-auto max-w-sm bg-zinc-900 rounded-2xl p-6 border border-zinc-800"
-            >
-              <h3 className="text-base font-medium text-white mb-2">
-                Delete Room
-              </h3>
-              <p className="text-sm text-zinc-400 mb-5">
-                This will permanently delete this room and all its messages.
-                This can&apos;t be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm text-white font-medium transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="flex-1 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm text-white font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {deleting ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    "Delete"
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 
@@ -703,7 +485,6 @@ function RoomPanel({
           transition={{ type: "spring", damping: 26, stiffness: 260 }}
           className="fixed top-0 right-0 bottom-0 w-[420px] lg:w-[480px] z-[1000] bg-zinc-950 border-l border-zinc-800/40"
         >
-          {/* Close button on left edge */}
           <button
             onClick={onClose}
             className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-7 h-14 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
@@ -716,12 +497,7 @@ function RoomPanel({
 
       {/* Mobile — vaul Drawer */}
       {isMobile && (
-        <Drawer.Root
-          open
-          onOpenChange={(open) => {
-            if (!open) onClose();
-          }}
-        >
+        <Drawer.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
           <Drawer.Portal>
             <Drawer.Overlay className="fixed inset-0 z-[10000] bg-black/60" />
             <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[10001] bg-zinc-950 rounded-t-2xl max-h-[85vh] flex flex-col outline-none overflow-hidden">
@@ -733,6 +509,18 @@ function RoomPanel({
           </Drawer.Portal>
         </Drawer.Root>
       )}
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {showEdit && (
+          <EditRoomModal
+            room={room}
+            onClose={() => setShowEdit(false)}
+            onUpdated={(updated) => { onUpdated(updated); setShowEdit(false); }}
+            onDeleted={onDeleted}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }
