@@ -138,20 +138,8 @@ function createRoomIcon(imageUrl?: string | null) {
   });
 }
 
-function CtrlWheelZoom() {
-  const map = useMap();
-  useEffect(() => {
-    const el = map.getContainer();
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      if (e.deltaY < 0) map.zoomIn();
-      else map.zoomOut();
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [map]);
-  return null;
-}
+// Removed custom CtrlWheelZoom as it caused severe animation lag on trackpads/wheels.
+// Leaflet's native scrollWheelZoom handles this much more efficiently.
 
 function FlyToLocation({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
@@ -244,20 +232,21 @@ const Map = forwardRef<MapHandle, MapProps>(function Map(
     <MapContainer
       center={center}
       zoom={15}
-      scrollWheelZoom={false}
+      scrollWheelZoom={true}
       zoomControl={false}
+      preferCanvas={true}
       style={{ height: "100%", width: "100%" }}
       ref={(map) => {
         if (map) setMapInstance(map);
       }}
       whenReady={() => setMapReady(true)}
     >
-      <CtrlWheelZoom />
-
       <TileLayer
         attribution="&copy; OpenStreetMap contributors"
-         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        //url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        keepBuffer={12}
+        updateWhenZooming={false}
+        updateWhenIdle={true}
       />
 
       {userLocation && mapReady && (

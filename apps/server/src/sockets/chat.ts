@@ -130,12 +130,38 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
 
   socket.on("typing", ({ roomId }) => {
     if (!roomId || !userId) return;
-    socket.to(roomId).emit("user_typing", { roomId, userId });
+    socket.to(roomId).emit("user_typing", {
+      roomId,
+      userId,
+      username: socket.data.username,
+      avatarUrl: socket.data.avatarUrl,
+    });
   });
 
   socket.on("stop_typing", ({ roomId }) => {
     if (!roomId || !userId) return;
-    socket.to(roomId).emit("user_stop_typing", { roomId, userId });
+    socket.to(roomId).emit("user_stop_typing", {
+      roomId,
+      userId,
+    });
+  });
+
+  // Room presence — get online users in a room
+  socket.on("get_room_online", async ({ roomId }) => {
+    if (!roomId) return;
+    const sockets = await io.in(roomId).fetchSockets();
+    const onlineUsers = sockets
+      .filter((s) => s.data.userId)
+      .map((s) => ({
+        id: s.data.userId,
+        username: s.data.username,
+        avatarUrl: s.data.avatarUrl,
+      }));
+    // Deduplicate by userId
+    const unique = Array.from(
+      new Map(onlineUsers.map((u) => [u.id, u])).values()
+    );
+    socket.emit("room_online", { roomId, users: unique });
   });
 
   socket.on("disconnect", () => {

@@ -116,7 +116,7 @@ export default function LocationPicker({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 bottom-16 md:bottom-0 md:left-[70px] z-[1000] flex flex-col bg-black"
+      className="absolute inset-0 bottom-16 lg:bottom-0 lg:left-[70px] z-[1000] flex flex-col bg-black"
     >
       {/* Top bar with search */}
       <div className="relative z-[1001] p-3 flex flex-col gap-2 bg-zinc-900/95 backdrop-blur-sm">

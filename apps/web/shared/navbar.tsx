@@ -50,6 +50,8 @@ export default function Navbar() {
   const [currentUserProfile, setCurrentUserProfile] = useAtom(currentUserProfileAtom);
   const { user, checked } = useAuth();
   const createRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const socketInitRef = useRef(false);
 
   useEffect(() => {
@@ -63,8 +65,22 @@ export default function Navbar() {
       return () => document.removeEventListener("mousedown", handleClick);
     }
   }, [createOpen]);
+
+  useEffect(() => {
+    function handleMoreClick(e: MouseEvent) {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreMenuOpen(false);
+      }
+    }
+    if (moreMenuOpen) {
+      document.addEventListener("mousedown", handleMoreClick);
+      return () => document.removeEventListener("mousedown", handleMoreClick);
+    }
+  }, [moreMenuOpen]);
+
   useEffect(() => {
     setCreateOpen(false);
+    setMoreMenuOpen(false);
   }, [pathname]);
   useEffect(() => {
     if (!user) return;
@@ -172,7 +188,7 @@ export default function Navbar() {
         initial={{ width: 0 }}
         animate={{ width: 70 }}
         whileHover={{ width: 220 }}
-        className="hidden md:flex fixed top-0 left-0 h-screen min-h-full flex-col py-6 bg-black z-[100]"
+        className="hidden lg:flex fixed top-0 left-0 h-screen min-h-full flex-col py-6 bg-black z-[100]"
       >
         <Image
           src="/slymelogo.png"
@@ -297,9 +313,9 @@ export default function Navbar() {
           })}
         </div>
 
-        <div className="px-3">
+        <div className="px-3 relative" ref={moreRef}>
           <button
-            onClick={() => setOpen((p) => !p)}
+            onClick={() => setMoreMenuOpen((p) => !p)}
             className="flex items-center gap-4 px-3 py-2 text-zinc-400 hover:text-white w-full hover:bg-white/30 rounded-xl"
           >
             <Menu size={26} className="min-w-6.5 max-w-6.5" />
@@ -311,10 +327,41 @@ export default function Navbar() {
               More
             </motion.span>
           </button>
+
+          <AnimatePresence>
+            {moreMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ duration: 0.15 }}
+                className="absolute bottom-full left-0 ml-3 mb-2 w-[260px] bg-[#262626] rounded-2xl overflow-hidden shadow-2xl z-[200]"
+              >
+                <div className="py-2">
+                  {/* For now, just one button */}
+                  <div className="px-2">
+                    <button
+                      onClick={() => {
+                        document.cookie.split(";").forEach((c) => {
+                          document.cookie = c
+                            .replace(/^ +/, "")
+                            .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                        });
+                        window.location.href = "/signin";
+                      }}
+                      className="w-full text-left px-4 py-3.5 text-[15px] text-white hover:bg-white/10 rounded-xl transition"
+                    >
+                      Log out
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.nav>
 
-      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-black z-[100]">
+      <nav className="lg:hidden fixed bottom-0 left-0 w-full bg-black z-[100]">
         <div className="flex justify-around items-center h-16">
           {items.slice(0, 5).map((i, k) => {
             const Icon = i.icon;

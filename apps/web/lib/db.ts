@@ -6,5 +6,5 @@ export const db = new Dexie('ChatDatabase') as Dexie & {
 };
 
 db.version(1).stores({
-  messages: 'id, roomId, createdAt', // primary key and indexes
+  messages: 'id, roomId, createdAt',
 });

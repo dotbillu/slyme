@@ -68,7 +68,7 @@ export default function RoomPickerModal({ shareUrl, onClose }: RoomPickerModalPr
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 20 }}
         transition={{ type: "spring", damping: 26, stiffness: 300 }}
-        className="fixed z-[2101] inset-x-4 top-1/2 -translate-y-1/2 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[400px] bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800 flex flex-col max-h-[80vh]"
+        className="fixed z-[2101] inset-x-4 top-1/2 -translate-y-1/2 lg:inset-auto lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:w-[400px] bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800 flex flex-col max-h-[80vh]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">

@@ -365,8 +365,8 @@ export default function CreateGigForm({
 
   return (
     <>
-      <div className="hidden md:flex"><DesktopModal {...sharedProps} /></div>
-      <div className="md:hidden"><MobileDrawer {...sharedProps} /></div>
+      <div className="hidden lg:flex"><DesktopModal {...sharedProps} /></div>
+      <div className="lg:hidden"><MobileDrawer {...sharedProps} /></div>
     </>
   );
 }
@@ -385,7 +385,7 @@ function DesktopModal(props: any) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 md:left-[70px] z-[1000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 lg:left-[70px] z-[1000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div

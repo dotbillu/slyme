@@ -66,7 +66,9 @@ export default function RoomChatPage() {
     const handleConnect = () => {
       setConnected(true)
       joinAllRooms()
-      socket.emit("mark_seen", { roomId })
+      if (document.visibilityState === "visible" && document.hasFocus()) {
+        socket.emit("mark_seen", { roomId })
+      }
       setRooms((prev) =>
         prev.map((r) => (r.id === roomId ? { ...r, unreadCount: 0 } : r))
       )
@@ -83,13 +85,12 @@ export default function RoomChatPage() {
       }
       if (rid === activeRoomRef.current) {
         setHasMore(msgs.length >= 50)
-        socket.emit("mark_seen", { roomId: rid })
       }
     }
 
     const handleReceiveMessage = async (msg: Message) => {
       await db.messages.put(msg)
-      if (msg.roomId === activeRoomRef.current) {
+      if (msg.roomId === activeRoomRef.current && document.visibilityState === "visible" && document.hasFocus()) {
         socket.emit("mark_seen", { roomId: msg.roomId })
       } else {
         setRooms((prev) =>
@@ -119,7 +120,9 @@ export default function RoomChatPage() {
     if (socket.connected) {
       setConnected(true)
       joinAllRooms()
-      socket.emit("mark_seen", { roomId })
+      if (document.visibilityState === "visible" && document.hasFocus()) {
+        socket.emit("mark_seen", { roomId })
+      }
       setRooms((prev) =>
         prev.map((r) => (r.id === roomId ? { ...r, unreadCount: 0 } : r))
       )
@@ -174,7 +177,7 @@ export default function RoomChatPage() {
   if (!user) return null
 
   return (
-    <div className="flex h-[calc(100dvh-4rem)] md:h-screen bg-black text-white md:ml-[70px]">
+    <div className="flex h-[calc(100dvh-4rem)] lg:h-screen bg-black text-white lg:ml-[70px]">
       <RoomSidebar
         rooms={rooms}
         activeRoomId={roomId}

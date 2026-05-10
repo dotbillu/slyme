@@ -15,7 +15,7 @@ router.get("/:username", async (req, res) => {
 
 router.patch("/:username", requireAuth, async (req, res) => {
   try {
-    const { username } = req.params;
+    const username = req.params.username as string;
     const userId = (req as any).userId;
     
     // Check if user exists and match the userId

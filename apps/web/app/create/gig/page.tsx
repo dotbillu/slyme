@@ -201,7 +201,7 @@ export default function CreateGigPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white md:ml-[70px] pb-20 md:pb-8">
+    <div className="min-h-screen bg-black text-white lg:ml-[70px] pb-20 lg:pb-8">
       <div className="max-w-lg mx-auto px-4 pt-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">

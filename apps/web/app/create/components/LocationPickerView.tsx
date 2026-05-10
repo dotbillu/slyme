@@ -98,7 +98,7 @@ export default function LocationPickerView({
   }
 
   return (
-    <div className="fixed inset-0 z-[10000] flex flex-col bg-black md:ml-[70px]">
+    <div className="fixed inset-0 z-[10000] flex flex-col bg-black lg:ml-[70px]">
       {/* Top bar */}
       <div className="relative z-[1001] p-3 flex flex-col gap-2 bg-zinc-900/95 backdrop-blur-sm">
         <div className="flex items-center gap-3">

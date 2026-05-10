@@ -120,7 +120,7 @@ export default function SearchPage() {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-black text-white md:ml-[70px] pb-20 md:pb-8">
+    <div className="min-h-screen bg-black text-white lg:ml-[70px] pb-20 lg:pb-8">
       <div className="max-w-2xl mx-auto px-4 pt-6">
         {/* Search input */}
         <div className="sticky top-0 bg-black pb-4 pt-2 z-10">

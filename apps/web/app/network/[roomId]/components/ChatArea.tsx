@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Room, Message } from "@/types/room"
 import { SendHorizontal, Smile, ArrowLeft, Users, Loader2 } from "lucide-react"
 import EmojiPicker, { Theme } from "emoji-picker-react"
 import LinkPreviewCard, { isShareLink } from "./LinkPreviewCard"
+import { socket } from "@/lib/socket"
 
 interface ChatAreaProps {
   room: Room | null
@@ -18,6 +19,18 @@ interface ChatAreaProps {
   onLoadOlder: () => void
   loadingOlder: boolean
   hasMore: boolean
+}
+
+interface TypingUser {
+  userId: string
+  username: string | null
+  avatarUrl: string | null
+}
+
+interface OnlineUser {
+  id: string
+  username: string | null
+  avatarUrl: string | null
 }
 
 export default function ChatArea({
@@ -34,11 +47,15 @@ export default function ChatArea({
   const router = useRouter()
   const [input, setInput] = useState("")
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([])
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const isInitialLoad = useRef(true)
   const prevScrollHeight = useRef(0)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isTypingRef = useRef(false)
 
   // Auto-scroll on initial load and new messages
   useEffect(() => {
@@ -55,6 +72,18 @@ export default function ChatArea({
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
   }, [messages])
+
+  // Scroll down when typing indicator appears
+  useEffect(() => {
+    if (typingUsers.length === 0) return
+    const container = messagesContainerRef.current
+    if (!container) return
+    const isNearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 120
+    if (isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [typingUsers])
 
   // Maintain scroll position after loading older messages
   useEffect(() => {
@@ -76,11 +105,90 @@ export default function ChatArea({
     }
   }, [loadingOlder, hasMore, onLoadOlder])
 
+  // Typing events
+  useEffect(() => {
+    if (!room) return
+
+    const handleUserTyping = ({ roomId, userId: uid, username, avatarUrl }: any) => {
+      if (roomId !== room.id || uid === userId) return
+      setTypingUsers((prev) => {
+        if (prev.some((u) => u.userId === uid)) return prev
+        return [...prev, { userId: uid, username, avatarUrl }]
+      })
+    }
+
+    const handleUserStopTyping = ({ roomId, userId: uid }: any) => {
+      if (roomId !== room.id) return
+      setTypingUsers((prev) => prev.filter((u) => u.userId !== uid))
+    }
+
+    socket.on("user_typing", handleUserTyping)
+    socket.on("user_stop_typing", handleUserStopTyping)
+
+    return () => {
+      socket.off("user_typing", handleUserTyping)
+      socket.off("user_stop_typing", handleUserStopTyping)
+      setTypingUsers([])
+    }
+  }, [room, userId])
+
+  // Online users
+  useEffect(() => {
+    if (!room || !connected) return
+
+    const handleRoomOnline = ({ roomId, users }: { roomId: string; users: OnlineUser[] }) => {
+      if (roomId !== room.id) return
+      setOnlineUsers(users.filter((u) => u.id !== userId))
+    }
+
+    socket.on("room_online", handleRoomOnline)
+
+    // Request online users
+    socket.emit("get_room_online", { roomId: room.id })
+
+    // Poll every 15 seconds
+    const interval = setInterval(() => {
+      socket.emit("get_room_online", { roomId: room.id })
+    }, 15000)
+
+    return () => {
+      socket.off("room_online", handleRoomOnline)
+      clearInterval(interval)
+      setOnlineUsers([])
+    }
+  }, [room, connected, userId])
+
+  // Emit typing/stop_typing
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value)
+
+    if (!room) return
+
+    if (!isTypingRef.current && e.target.value.trim()) {
+      isTypingRef.current = true
+      socket.emit("typing", { roomId: room.id })
+    }
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+    typingTimeoutRef.current = setTimeout(() => {
+      if (isTypingRef.current) {
+        isTypingRef.current = false
+        socket.emit("stop_typing", { roomId: room.id })
+      }
+    }, 2000)
+  }
+
   const handleSend = () => {
     if (!input.trim()) return
     onSendMessage(input.trim())
     setInput("")
     setShowEmojiPicker(false)
+    // Stop typing
+    if (isTypingRef.current && room) {
+      isTypingRef.current = false
+      socket.emit("stop_typing", { roomId: room.id })
+    }
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     inputRef.current?.focus()
   }
 
@@ -91,7 +199,7 @@ export default function ChatArea({
         {/* Back button — mobile only */}
         <button
           onClick={() => router.push("/network")}
-          className="md:hidden p-2 -ml-1 hover:bg-zinc-800 rounded-full transition"
+          className="lg:hidden p-2 -ml-1 hover:bg-zinc-800 rounded-full transition"
         >
           <ArrowLeft size={20} />
         </button>
@@ -111,15 +219,39 @@ export default function ChatArea({
               <p className="font-semibold text-sm text-white truncate">{room.name}</p>
               <p className="text-[11px] text-zinc-500 flex items-center gap-1">
                 <Users size={10} />
-                {room.members?.length || 0} members
-                {connected && (
-                  <span className="ml-1.5 flex items-center gap-1 text-green-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                    active
-                  </span>
-                )}
+                {room.members?.length || 0}
               </p>
             </div>
+            {/* Online users avatars — stacked on the right, only if others are online */}
+            {onlineUsers.length > 0 && (
+              <div className="flex items-center -space-x-2 flex-shrink-0">
+                {onlineUsers.slice(0, 4).map((u) => (
+                  <div
+                    key={u.id}
+                    className="relative w-7 h-7 rounded-full bg-zinc-700 ring-2 ring-black overflow-visible flex items-center justify-center"
+                    title={u.username || "user"}
+                  >
+                    <div className="w-full h-full rounded-full overflow-hidden">
+                      {u.avatarUrl ? (
+                        <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-zinc-700 flex items-center justify-center">
+                          <span className="text-[9px] font-medium text-zinc-300">
+                            {u.username?.charAt(0)?.toUpperCase() || "?"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-[1.5px] border-black" />
+                  </div>
+                ))}
+                {onlineUsers.length > 4 && (
+                  <div className="w-7 h-7 rounded-full bg-zinc-800 ring-2 ring-black flex items-center justify-center">
+                    <span className="text-[9px] font-bold text-zinc-400">+{onlineUsers.length - 4}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         ) : (
           <div className="flex-1">
@@ -248,54 +380,101 @@ export default function ChatArea({
             )
           })
         )}
+        {/* Typing indicator — inside scroll, at the bottom */}
+        <AnimatePresence>
+          {typingUsers.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.15 }}
+              className="flex items-center gap-2 pt-2 pb-1"
+            >
+              <div className="flex -space-x-1.5">
+                {typingUsers.slice(0, 3).map((u) => (
+                  <div
+                    key={u.userId}
+                    className="w-5 h-5 rounded-full bg-zinc-800 ring-1 ring-black overflow-hidden flex items-center justify-center"
+                  >
+                    {u.avatarUrl ? (
+                      <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[8px] text-zinc-400">
+                        {u.username?.charAt(0)?.toUpperCase() || "?"}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <span className="text-[11px] text-zinc-500">
+                {typingUsers.length === 1
+                  ? `${typingUsers[0].username || "Someone"} is typing`
+                  : `${typingUsers.length} people typing`}
+              </span>
+              <span className="flex gap-0.5">
+                <span className="w-1 h-1 rounded-full bg-zinc-600 animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1 h-1 rounded-full bg-zinc-600 animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1 h-1 rounded-full bg-zinc-600 animate-bounce" style={{ animationDelay: "300ms" }} />
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-zinc-800/60 bg-black relative">
-        {showEmojiPicker && (
-          <>
-            <div 
-              className="fixed inset-0 z-40" 
-              onClick={() => setShowEmojiPicker(false)} 
-            />
-            <div className="absolute bottom-[72px] left-4 z-50 shadow-2xl rounded-lg overflow-hidden border border-zinc-800">
-              <EmojiPicker 
-                theme={Theme.DARK} 
-                onEmojiClick={(emojiData) => setInput((prev) => prev + emojiData.emoji)} 
-                lazyLoadEmojis={true}
+      <div className="bg-black px-4">
+        <div className="py-3 relative">
+          {showEmojiPicker && (
+            <>
+              <div 
+                className="fixed inset-0 z-40" 
+                onClick={() => setShowEmojiPicker(false)} 
               />
-            </div>
-          </>
-        )}
-        <div className="flex items-center gap-2 bg-zinc-900 border-2 border-zinc-700 focus-within:border-zinc-500 transition-colors rounded-full px-4 py-2.5 relative z-50">
-          <button 
-            onClick={() => setShowEmojiPicker((prev) => !prev)}
-            className="text-zinc-500 hover:text-zinc-300 transition flex-shrink-0"
+              <div className="absolute bottom-[60px] left-0 z-50 shadow-2xl rounded-lg overflow-hidden border border-zinc-800">
+                <EmojiPicker 
+                  theme={Theme.DARK} 
+                  onEmojiClick={(emojiData) => setInput((prev) => prev + emojiData.emoji)} 
+                  lazyLoadEmojis={true}
+                />
+              </div>
+            </>
+          )}
+          <motion.div
+            layout
+            className="flex items-center gap-2 bg-zinc-950 border border-zinc-800/50 rounded-full px-4 py-2.5 relative z-50"
           >
-            <Smile size={20} />
-          </button>
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Message..."
-            className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-zinc-500 min-w-0"
-          />
-          <motion.button
-            whileTap={{ scale: 0.85 }}
-            onClick={handleSend}
-            disabled={!input.trim()}
-            className={`p-1.5 rounded-full transition-all flex-shrink-0 ${
-              input.trim()
-                ? "text-green-400 hover:text-green-300 hover:bg-green-500/10"
-                : "text-zinc-700"
-            }`}
-          >
-            <SendHorizontal size={18} />
-          </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.8 }}
+              onClick={() => setShowEmojiPicker((prev) => !prev)}
+              className="text-zinc-600 hover:text-zinc-400 transition flex-shrink-0"
+            >
+              <Smile size={18} />
+            </motion.button>
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              placeholder="Message..."
+              className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-zinc-600 min-w-0"
+            />
+            <motion.button
+              whileTap={{ scale: 0.75, rotate: -15 }}
+              animate={input.trim() ? { scale: 1, opacity: 1 } : { scale: 0.8, opacity: 0.3 }}
+              transition={{ type: "spring", stiffness: 400, damping: 20 }}
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className={`p-1.5 rounded-full flex-shrink-0 ${
+                input.trim()
+                  ? "text-green-400"
+                  : "text-zinc-800"
+              }`}
+            >
+              <SendHorizontal size={18} />
+            </motion.button>
+          </motion.div>
         </div>
       </div>
     </div>
