@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Room, Message } from "@/types/room"
-import { Send, ArrowLeft, Users, Loader2 } from "lucide-react"
+import { SendHorizontal, Smile, ArrowLeft, Users, Loader2 } from "lucide-react"
+import EmojiPicker, { Theme } from "emoji-picker-react"
 import LinkPreviewCard, { isShareLink } from "./LinkPreviewCard"
 
 interface ChatAreaProps {
@@ -32,6 +33,7 @@ export default function ChatArea({
 }: ChatAreaProps) {
   const router = useRouter()
   const [input, setInput] = useState("")
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -78,6 +80,7 @@ export default function ChatArea({
     if (!input.trim()) return
     onSendMessage(input.trim())
     setInput("")
+    setShowEmojiPicker(false)
     inputRef.current?.focus()
   }
 
@@ -249,8 +252,29 @@ export default function ChatArea({
       </div>
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-zinc-800/60">
-        <div className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-800/60 rounded-full px-4 py-2.5">
+      <div className="px-4 py-3 border-t border-zinc-800/60 bg-black relative">
+        {showEmojiPicker && (
+          <>
+            <div 
+              className="fixed inset-0 z-40" 
+              onClick={() => setShowEmojiPicker(false)} 
+            />
+            <div className="absolute bottom-[72px] left-4 z-50 shadow-2xl rounded-lg overflow-hidden border border-zinc-800">
+              <EmojiPicker 
+                theme={Theme.DARK} 
+                onEmojiClick={(emojiData) => setInput((prev) => prev + emojiData.emoji)} 
+                lazyLoadEmojis={true}
+              />
+            </div>
+          </>
+        )}
+        <div className="flex items-center gap-2 bg-zinc-900 border-2 border-zinc-700 focus-within:border-zinc-500 transition-colors rounded-full px-4 py-2.5 relative z-50">
+          <button 
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            className="text-zinc-500 hover:text-zinc-300 transition flex-shrink-0"
+          >
+            <Smile size={20} />
+          </button>
           <input
             ref={inputRef}
             type="text"
@@ -258,19 +282,19 @@ export default function ChatArea({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Message..."
-            className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-zinc-600"
+            className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-zinc-500 min-w-0"
           />
           <motion.button
             whileTap={{ scale: 0.85 }}
             onClick={handleSend}
             disabled={!input.trim()}
-            className={`p-1.5 rounded-full transition-all ${
+            className={`p-1.5 rounded-full transition-all flex-shrink-0 ${
               input.trim()
                 ? "text-green-400 hover:text-green-300 hover:bg-green-500/10"
                 : "text-zinc-700"
             }`}
           >
-            <Send size={18} />
+            <SendHorizontal size={18} />
           </motion.button>
         </div>
       </div>
