@@ -297,10 +297,10 @@ export default function ExplorePage() {
         />
       </div>
 
-      <AnimatePresence>
-        {selectedGig && (
+      <AnimatePresence mode="wait">
+        {selectedGig ? (
           <GigDetail
-            key={selectedGig.id}
+            key={`gig-${selectedGig.id}`}
             gig={selectedGig}
             isOwner={isOwner(selectedGig)}
             onClose={handleGigClose}
@@ -309,12 +309,9 @@ export default function ExplorePage() {
             onRoomClick={handleGigRoomClick}
             isLoggedIn={!!user}
           />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {selectedRoom && (
+        ) : selectedRoom ? (
           <RoomPanel
+            key={`room-${selectedRoom.id}`}
             room={selectedRoom}
             isOwner={isRoomOwner(selectedRoom)}
             onClose={handleRoomClose}
@@ -324,7 +321,7 @@ export default function ExplorePage() {
             joining={joining}
             isLoggedIn={!!user}
           />
-        )}
+        ) : null}
       </AnimatePresence>
     </div>
   );
