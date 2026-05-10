@@ -46,6 +46,17 @@ const GigDetail = dynamic(() => import("@/app/explore/components/GigDetail"), {
   ssr: false,
 });
 
+async function uploadFile(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/upload", { method: "POST", body: formData });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Upload failed");
+  }
+  return (await res.json()).url;
+}
+
 export default function ExplorePage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -378,6 +389,7 @@ function RoomPanel({
   const [isMobile, setIsMobile] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -431,17 +443,15 @@ function RoomPanel({
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) return;
-      const { url } = await res.json();
+      const url = await uploadFile(file);
       setEditImageUrl(url);
-    } catch {}
+    } catch {
+      // silently fail
+    } finally {
+      setUploading(false);
+    }
   };
 
   const panelContent = (
@@ -452,7 +462,9 @@ function RoomPanel({
         <div className="mx-4 rounded-xl overflow-hidden aspect-[16/10] bg-zinc-900 relative">
           {editing ? (
             <label className="w-full h-full flex items-center justify-center cursor-pointer hover:bg-zinc-800 transition">
-              {editImageUrl ? (
+              {uploading ? (
+                <Loader2 size={24} className="animate-spin text-zinc-500" />
+              ) : editImageUrl ? (
                 <img
                   src={editImageUrl}
                   alt={editName}
@@ -468,6 +480,7 @@ function RoomPanel({
                 accept="image/*"
                 className="hidden"
                 onChange={handleImageUpload}
+                disabled={uploading}
               />
             </label>
           ) : room.imageUrl ? (
