@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 export function proxy(req: NextRequest) {
   const token = req.cookies.get("token")?.value;
+  const allCookies = req.cookies.getAll().map(c => c.name);
   const { pathname } = req.nextUrl;
 
   const isAuthPage =
@@ -13,9 +14,9 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/network") ||
     pathname.startsWith("/create");
 
-  // Debug logging for production troubleshooting
+  // Debug logging
   if (isProtected || isAuthPage) {
-    console.log(`[Middleware] Path: ${pathname}, HasToken: ${!!token}`);
+    console.log(`[Middleware] Path: ${pathname}, HasToken: ${!!token}, CookiesFound: ${allCookies.join(', ') || 'none'}`);
   }
 
   if (!token && isProtected && !isAuthPage) {
