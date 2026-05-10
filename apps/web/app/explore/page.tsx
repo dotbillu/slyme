@@ -147,7 +147,14 @@ export default function ExplorePage() {
   return (
     <div className="relative h-screen w-full overflow-hidden">
       <div className="absolute inset-0">
-        <Map userLocation={userLocation} avatarUrl={avatarUrl} gigs={gigs} rooms={rooms} onGigClick={handleGigClick} onRoomClick={handleRoomClick} />
+        <Map
+          userLocation={userLocation}
+          avatarUrl={avatarUrl}
+          gigs={gigs}
+          rooms={rooms}
+          onGigClick={handleGigClick}
+          onRoomClick={handleRoomClick}
+        />
       </div>
 
       <AnimatePresence>

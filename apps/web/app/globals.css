@@ -99,3 +99,12 @@ nav a:focus {
   outline: none !important;
   box-shadow: none !important;
 }
+
+/* Leaflet tile rendering fix — prevent white flash on zoom */
+.leaflet-container {
+  background: #000000 !important;
+}
+
+.leaflet-tile-pane {
+  background: #000000 !important;
+}

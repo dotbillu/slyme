@@ -9,7 +9,15 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect, useState, forwardRef, useImperativeHandle } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  memo,
+  forwardRef,
+  useImperativeHandle,
+  useCallback,
+} from "react";
 import L from "leaflet";
 import { Gig } from "@/types/gig";
 import { Room } from "@/types/room";
@@ -138,14 +146,26 @@ function createRoomIcon(imageUrl?: string | null) {
   });
 }
 
-// Removed custom CtrlWheelZoom as it caused severe animation lag on trackpads/wheels.
-// Leaflet's native scrollWheelZoom handles this much more efficiently.
-
-function FlyToLocation({ lat, lng }: { lat: number; lng: number }) {
+/**
+ * Handles initial fly-to and invalidateSize on mount only.
+ * Does NOT interfere with zoom/pan events.
+ */
+function MapSetup({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
+  const hasMoved = useRef(false);
+
   useEffect(() => {
-    map.flyTo([lat, lng], 15, { duration: 1.2 });
+    // Only fly once on initial mount
+    if (!hasMoved.current) {
+      hasMoved.current = true;
+      // Small delay to let tiles start loading first
+      setTimeout(() => {
+        map.invalidateSize();
+        map.setView([lat, lng], 15, { animate: false });
+      }, 50);
+    }
   }, [lat, lng, map]);
+
   return null;
 }
 
@@ -199,157 +219,148 @@ const pickerIcon = L.divIcon({
   popupAnchor: [0, -36],
 });
 
-const Map = forwardRef<MapHandle, MapProps>(function Map(
-  {
-    userLocation,
-    avatarUrl,
-    gigs,
-    rooms,
-    onGigClick,
-    onRoomClick,
-    locationPickerMode,
-    pickedLocation,
-    onLocationSelect,
-  },
-  ref,
-) {
-  const [mapReady, setMapReady] = useState(false);
-  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
-
-  useImperativeHandle(ref, () => ({
-    flyTo: (lat: number, lng: number) => {
-      mapInstance?.flyTo([lat, lng], 15, { duration: 1.2 });
+const Map = memo(
+  forwardRef<MapHandle, MapProps>(function Map(
+    {
+      userLocation,
+      avatarUrl,
+      gigs,
+      rooms,
+      onGigClick,
+      onRoomClick,
+      locationPickerMode,
+      pickedLocation,
+      onLocationSelect,
     },
-  }));
+    ref,
+  ) {
+    const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
 
-  const center: [number, number] = userLocation
-    ? [userLocation.lat, userLocation.lng]
-    : [51.505, -0.09];
+    useImperativeHandle(ref, () => ({
+      flyTo: (lat: number, lng: number) => {
+        mapInstance?.flyTo([lat, lng], 15, { duration: 1.2 });
+      },
+    }));
 
-  const icon = avatarUrl ? createAvatarIcon(avatarUrl) : fallbackIcon;
+    const center: [number, number] = userLocation
+      ? [userLocation.lat, userLocation.lng]
+      : [51.505, -0.09];
 
-  return (
-    <MapContainer
-      center={center}
-      zoom={15}
-      minZoom={3}
-      maxZoom={18}
-      scrollWheelZoom={true}
-      wheelDebounceTime={150}
-      wheelPxPerZoomLevel={120}
-      zoomControl={false}
-      preferCanvas={true}
-      worldCopyJump={false}
-      maxBounds={[
-        [-90, -180],
-        [90, 180],
-      ]}
-      maxBoundsViscosity={1.0}
-      style={{ height: "100%", width: "100%" }}
-      ref={(map) => {
-        if (map) setMapInstance(map);
-      }}
-      whenReady={() => setMapReady(true)}
-    >
-      <TileLayer
-        attribution="&copy; OpenStreetMap contributors"
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        noWrap={true}
-        keepBuffer={12}
-        updateWhenZooming={false}
-        updateWhenIdle={true}
-      />
+    const icon = avatarUrl ? createAvatarIcon(avatarUrl) : fallbackIcon;
 
-      {userLocation && mapReady && (
-        <>
-          <FlyToLocation lat={userLocation.lat} lng={userLocation.lng} />
-          <Marker position={[userLocation.lat, userLocation.lng]} icon={icon}>
-            <Popup>
-              <span style={{ color: "#000" }}>You are here</span>
-            </Popup>
-          </Marker>
-        </>
-      )}
+    return (
+      <MapContainer
+        center={center}
+        zoom={15}
+        minZoom={3}
+        maxZoom={18}
+        scrollWheelZoom={true}
+        wheelDebounceTime={40}
+        wheelPxPerZoomLevel={60}
+        zoomControl={false}
+        style={{ height: "100%", width: "100%", background: "#000000" }}
+        ref={(map) => {
+          if (map && !mapInstance) setMapInstance(map);
+        }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+          subdomains="abcd"
+          maxZoom={19}
+        />
 
-      {/* Gig markers */}
-      {gigs?.map((gig) => {
-        if (!gig.latitude || !gig.longitude) return null;
-        const gigImage = gig.imageUrls?.[0] || gig.createdBy?.avatarUrl;
-        const gigIcon = createGigIcon(gigImage);
-        return (
-          <Marker
-            key={gig.id}
-            position={[gig.latitude, gig.longitude]}
-            icon={gigIcon}
-            eventHandlers={{
-              click: () => onGigClick?.(gig),
-            }}
-          >
-            <Popup>
-              <div style={{ color: "#000", maxWidth: 180 }}>
-                <strong style={{ fontSize: 13 }}>{gig.title}</strong>
-                {gig.reward && (
-                  <p style={{ fontSize: 11, margin: "4px 0 0" }}>
-                    {gig.reward}
-                  </p>
-                )}
-                {gig.createdBy && (
+        {userLocation && (
+          <>
+            <MapSetup lat={userLocation.lat} lng={userLocation.lng} />
+            <Marker position={[userLocation.lat, userLocation.lng]} icon={icon}>
+              <Popup>
+                <span style={{ color: "#000" }}>You are here</span>
+              </Popup>
+            </Marker>
+          </>
+        )}
+
+        {/* Gig markers */}
+        {gigs?.map((gig) => {
+          if (!gig.latitude || !gig.longitude) return null;
+          const gigImage = gig.imageUrls?.[0] || gig.createdBy?.avatarUrl;
+          const gigIcon = createGigIcon(gigImage);
+          return (
+            <Marker
+              key={gig.id}
+              position={[gig.latitude, gig.longitude]}
+              icon={gigIcon}
+              eventHandlers={{
+                click: () => onGigClick?.(gig),
+              }}
+            >
+              <Popup>
+                <div style={{ color: "#000", maxWidth: 180 }}>
+                  <strong style={{ fontSize: 13 }}>{gig.title}</strong>
+                  {gig.reward && (
+                    <p style={{ fontSize: 11, margin: "4px 0 0" }}>
+                      {gig.reward}
+                    </p>
+                  )}
+                  {gig.createdBy && (
+                    <p style={{ fontSize: 10, color: "#666", margin: "4px 0 0" }}>
+                      by {gig.createdBy.username || gig.createdBy.name}
+                    </p>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
+        {/* Room markers */}
+        {rooms?.map((room) => {
+          if (!room.latitude || !room.longitude) return null;
+          const roomIcon = createRoomIcon(room.imageUrl);
+          return (
+            <Marker
+              key={`room-${room.id}`}
+              position={[room.latitude, room.longitude]}
+              icon={roomIcon}
+              eventHandlers={{
+                click: () => onRoomClick?.(room),
+              }}
+            >
+              <Popup>
+                <div style={{ color: "#000", maxWidth: 180 }}>
+                  <strong style={{ fontSize: 13 }}>{room.name}</strong>
+                  {room.description && (
+                    <p style={{ fontSize: 11, margin: "4px 0 0" }}>
+                      {room.description}
+                    </p>
+                  )}
                   <p style={{ fontSize: 10, color: "#666", margin: "4px 0 0" }}>
-                    by {gig.createdBy.username || gig.createdBy.name}
+                    {room._count?.members || room.members?.length || 0} members
                   </p>
-                )}
-              </div>
-            </Popup>
-          </Marker>
-        );
-      })}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
 
-      {/* Room markers */}
-      {rooms?.map((room) => {
-        if (!room.latitude || !room.longitude) return null;
-        const roomIcon = createRoomIcon(room.imageUrl);
-        return (
+        {locationPickerMode && onLocationSelect && (
+          <LocationPickerEvents onLocationSelect={onLocationSelect} />
+        )}
+
+        {pickedLocation && (
           <Marker
-            key={`room-${room.id}`}
-            position={[room.latitude, room.longitude]}
-            icon={roomIcon}
-            eventHandlers={{
-              click: () => onRoomClick?.(room),
-            }}
+            position={[pickedLocation.lat, pickedLocation.lng]}
+            icon={pickerIcon}
           >
             <Popup>
-              <div style={{ color: "#000", maxWidth: 180 }}>
-                <strong style={{ fontSize: 13 }}>{room.name}</strong>
-                {room.description && (
-                  <p style={{ fontSize: 11, margin: "4px 0 0" }}>
-                    {room.description}
-                  </p>
-                )}
-                <p style={{ fontSize: 10, color: "#666", margin: "4px 0 0" }}>
-                  {room._count?.members || room.members?.length || 0} members
-                </p>
-              </div>
+              <span style={{ color: "#000" }}>Gig location</span>
             </Popup>
           </Marker>
-        );
-      })}
-
-      {locationPickerMode && onLocationSelect && (
-        <LocationPickerEvents onLocationSelect={onLocationSelect} />
-      )}
-
-      {pickedLocation && (
-        <Marker
-          position={[pickedLocation.lat, pickedLocation.lng]}
-          icon={pickerIcon}
-        >
-          <Popup>
-            <span style={{ color: "#000" }}>Gig location</span>
-          </Popup>
-        </Marker>
-      )}
-    </MapContainer>
-  );
-});
+        )}
+      </MapContainer>
+    );
+  }),
+);
 
 export default Map;

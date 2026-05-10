@@ -10,12 +10,9 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-[#5cb038]/30 selection:text-white overflow-hidden flex flex-col">
-      {/* Hero Section - The Main Focus */}
       <main className="flex-1 flex flex-col items-center justify-center relative px-6 pt-20 min-h-screen">
-        {/* Tech/Digital Ambient Glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-[500px] bg-[#5cb038]/5 blur-[120px] pointer-events-none rounded-full" />
         
-        {/* Grid Pattern Overlay for Tech feel */}
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
 
@@ -60,23 +57,11 @@ export default function LandingPage() {
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[150px] bg-[#5cb038]/5 blur-[100px] pointer-events-none" />
         
         <div className="max-w-4xl mx-auto text-center relative z-10">
-          <Image src="/slymelogo.png" alt="Slyme Logo" width={50} height={30} className="mx-auto mb-8 opacity-20 grayscale" />
           <h3 className="text-xl font-black mb-10 tracking-[0.3em] text-zinc-600 uppercase">Connect with the developer</h3>
           
           <div className="flex flex-col items-center gap-8">
-            <div className="flex gap-4">
-               <a href="mailto:abhay@dotbillu.in" className="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center hover:bg-[#5cb038] hover:text-white transition-all duration-300 border border-white/5 group shadow-xl">
-                  <Mail size={22} className="text-zinc-400 group-hover:text-white transition-colors" />
-               </a>
-               <a href="https://dotbillu.in" target="_blank" className="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center hover:bg-[#5cb038] hover:text-white transition-all duration-300 border border-white/5 group shadow-xl">
-                  <Globe size={22} className="text-zinc-400 group-hover:text-white transition-colors" />
-               </a>
-            </div>
             
             <div className="space-y-3">
-              <p className="text-zinc-600 text-[11px] font-black tracking-[0.2em] uppercase">
-                Designed & Developed by
-              </p>
               <a 
                 href="https://dotbillu.in" 
                 target="_blank" 
