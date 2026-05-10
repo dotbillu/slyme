@@ -67,10 +67,10 @@ export default function Navbar() {
     }
   }, [user, setUnseenCount]);
   const isAuthPage = pathname === "/signin" || pathname === "/signup";
-  if(!checked)return null
+  if (!checked) return null;
   if (!user) {
     return !isAuthPage ? (
-      <div className="fixed top-0 left-0 w-full z-[2000]">
+      <div className="fixed top-0 left-0 w-full z-[1900]">
         <div className="relative w-full px-5 h-20 flex items-center justify-between bg-gradient-to-b from-black/50 via-black/30 to-transparent backdrop-blur-md">
           <div className="flex items-center gap-3 ">
             <Image src="/slymelogo.png" alt="logo" width={50} height={28} />

@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Drawer } from "vaul";
+import { useRouter } from "next/navigation";
 import {
-  X, MapPin, Clock, Calendar, Tag, Award, Pencil, Trash2,
-  Loader2, ArrowLeft, Check, ChevronLeft, ChevronRight, Upload,
+  X, MapPin, Pencil, Trash2, Loader2, ArrowLeft, Check,
+  ChevronLeft, ChevronRight, Upload, Clock, Calendar, Award,
 } from "lucide-react";
 import { Gig, GIG_TYPES, UpdateGigPayload } from "@/types/gig";
 import { updateGig, deleteGig } from "@/services/gig/service";
+import ShareMenu from "./ShareMenu";
 
 interface GigDetailProps {
   gig: Gig;
@@ -15,12 +18,13 @@ interface GigDetailProps {
   onClose: () => void;
   onUpdated: (gig: Gig) => void;
   onDeleted: (id: string) => void;
+  isLoggedIn?: boolean;
 }
 
 function formatDate(d: string | null) {
-  if (!d) return "—";
+  if (!d) return "";
   return new Date(d).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
+    weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
   });
 }
 
@@ -32,283 +36,196 @@ async function uploadFile(file: File): Promise<string> {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || "Upload failed");
   }
-  const data = await res.json();
-  return data.url;
+  return (await res.json()).url;
 }
 
-/* ─── Image Gallery ─── */
-function ImageGallery({ images, onImageClick }: { images: string[]; onImageClick: (index: number) => void }) {
+/* ─── Image Carousel ─── */
+function ImageCarousel({ images, onImageClick }: { images: string[]; onImageClick: (i: number) => void }) {
   const [current, setCurrent] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   if (images.length === 0) return null;
 
-  const scrollTo = (index: number) => {
-    setCurrent(index);
-    scrollRef.current?.children[index]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  const scrollTo = (i: number) => {
+    setCurrent(i);
+    ref.current?.scrollTo({ left: i * (ref.current?.clientWidth || 0), behavior: "smooth" });
   };
 
-  const prev = () => scrollTo(current > 0 ? current - 1 : images.length - 1);
-  const next = () => scrollTo(current < images.length - 1 ? current + 1 : 0);
-
-  if (images.length === 1) {
-    return (
-      <div
-        className="w-full aspect-[16/10] rounded-xl overflow-hidden bg-zinc-800 cursor-pointer"
-        onClick={() => onImageClick(0)}
-      >
-        <img src={images[0]} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-      </div>
-    );
-  }
-
   return (
-    <div className="relative">
+    <div className="relative bg-zinc-900 mx-4 rounded-xl overflow-hidden">
       <div
-        ref={scrollRef}
-        className="flex gap-0 overflow-x-auto overflow-y-hidden snap-x snap-mandatory rounded-xl scrollbar-hide"
+        ref={ref}
+        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
         onScroll={(e) => {
           const el = e.currentTarget;
-          const index = Math.round(el.scrollLeft / el.clientWidth);
-          setCurrent(index);
+          const i = Math.round(el.scrollLeft / el.clientWidth);
+          if (i !== current) setCurrent(i);
         }}
       >
         {images.map((url, i) => (
-          <div
-            key={i}
-            className="w-full flex-shrink-0 aspect-[16/10] snap-center cursor-pointer bg-zinc-800"
-            onClick={() => onImageClick(i)}
-          >
+          <div key={i} className="w-full flex-shrink-0 aspect-[16/10] snap-center cursor-pointer" onClick={() => onImageClick(i)}>
             <img src={url} alt="" className="w-full h-full object-cover" />
           </div>
         ))}
       </div>
-
-      {/* Navigation arrows */}
       {images.length > 1 && (
         <>
-          <button
-            onClick={prev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition"
-          >
+          <button onClick={() => scrollTo(current > 0 ? current - 1 : images.length - 1)} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition">
             <ChevronLeft size={16} />
           </button>
-          <button
-            onClick={next}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition"
-          >
+          <button onClick={() => scrollTo(current < images.length - 1 ? current + 1 : 0)} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition">
             <ChevronRight size={16} />
           </button>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+            {images.map((_, i) => (
+              <div key={i} className={`h-1.5 rounded-full transition-all ${i === current ? "w-4 bg-white" : "w-1.5 bg-white/40"}`} />
+            ))}
+          </div>
         </>
-      )}
-
-      {/* Dots */}
-      {images.length > 1 && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
-          {images.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => scrollTo(i)}
-              className={`w-1.5 h-1.5 rounded-full transition-all ${
-                i === current ? "bg-white w-4" : "bg-white/40"
-              }`}
-            />
-          ))}
-        </div>
       )}
     </div>
   );
 }
 
-/* ─── Fullscreen Lightbox ─── */
+/* ─── Lightbox ─── */
 function Lightbox({ images, startIndex, onClose }: { images: string[]; startIndex: number; onClose: () => void }) {
   const [current, setCurrent] = useState(startIndex);
-
   const prev = () => setCurrent(current > 0 ? current - 1 : images.length - 1);
   const next = () => setCurrent(current < images.length - 1 ? current + 1 : 0);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[2000] bg-black/95 flex items-center justify-center"
-      onClick={onClose}
-    >
-      {/* Close */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 p-2 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-white z-10"
-      >
-        <X size={20} />
-      </button>
-
-      {/* Counter */}
-      {images.length > 1 && (
-        <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-zinc-800/80 text-white text-xs">
-          {current + 1} / {images.length}
-        </div>
-      )}
-
-      {/* Image */}
-      <motion.img
-        key={current}
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.2 }}
-        src={images[current]}
-        alt=""
-        className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
-        onClick={(e) => e.stopPropagation()}
-      />
-
-      {/* Navigation */}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[9999] bg-black flex items-center justify-center" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10"><X size={18} /></button>
+      {images.length > 1 && <div className="absolute top-4 left-4 px-2.5 py-1 rounded-full bg-white/10 text-white text-xs">{current + 1}/{images.length}</div>}
+      <motion.img key={current} initial={{ opacity: 0 }} animate={{ opacity: 1 }} src={images[current]} alt="" className="max-w-[92vw] max-h-[92vh] object-contain" onClick={(e) => e.stopPropagation()} />
       {images.length > 1 && (
         <>
-          <button
-            onClick={(e) => { e.stopPropagation(); prev(); }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-white"
-          >
-            <ChevronLeft size={24} />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); next(); }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-white"
-          >
-            <ChevronRight size={24} />
-          </button>
+          <button onClick={(e) => { e.stopPropagation(); prev(); }} className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white"><ChevronLeft size={20} /></button>
+          <button onClick={(e) => { e.stopPropagation(); next(); }} className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white"><ChevronRight size={20} /></button>
         </>
       )}
     </motion.div>
   );
 }
 
-/* ─── Read-only detail view ─── */
-function DetailView({ gig, isOwner, onEdit, onDelete, deleting, onImageClick }: {
+/* ─── Detail View ─── */
+function DetailView({ gig, isOwner, onEdit, onDelete, deleting, onImageClick, isLoggedIn }: {
   gig: Gig; isOwner: boolean;
   onEdit: () => void; onDelete: () => void; deleting: boolean;
-  onImageClick: (index: number) => void;
+  onImageClick: (i: number) => void; isLoggedIn: boolean;
 }) {
-  return (
-    <div className="flex flex-col gap-5">
-      {/* Image gallery */}
-      <ImageGallery images={gig.imageUrls} onImageClick={onImageClick} />
+  const router = useRouter();
 
-      {/* Title & type badge */}
-      <div>
-        <div className="flex items-start justify-between gap-3">
-          <h2 className="text-lg font-semibold text-white leading-tight">{gig.title}</h2>
-          {gig.type && (
-            <span className="shrink-0 text-[10px] px-2.5 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 font-medium">
-              {gig.type}
-            </span>
+  const creatorEl = gig.createdBy ? (
+    <button
+      onClick={() => {
+        if (gig.createdBy?.username) router.push(`/${gig.createdBy.username}`);
+      }}
+      className="flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-black/60 backdrop-blur-sm hover:bg-black/80 transition"
+    >
+      {gig.createdBy.avatarUrl ? (
+        <img src={gig.createdBy.avatarUrl} className="w-5 h-5 rounded-full object-cover" alt="" />
+      ) : (
+        <div className="w-5 h-5 rounded-full bg-zinc-700 flex items-center justify-center text-[9px] text-white font-medium">
+          {(gig.createdBy.username || gig.createdBy.name || "?")[0].toUpperCase()}
+        </div>
+      )}
+      <span className="text-xs text-white font-medium">{gig.createdBy.username || gig.createdBy.name || "Anonymous"}</span>
+    </button>
+  ) : null;
+
+  return (
+    <div className="flex-1 overflow-y-auto scrollbar-hide py-4">
+      {/* Image with creator overlay */}
+      {gig.imageUrls.length > 0 ? (
+        <div className="relative">
+          <ImageCarousel images={gig.imageUrls} onImageClick={onImageClick} />
+          {creatorEl && (
+            <div className="absolute bottom-3 left-7 z-10">
+              {creatorEl}
+            </div>
           )}
         </div>
-        {gig.createdBy && (
-          <div className="flex items-center gap-2 mt-2.5">
-            {gig.createdBy.avatarUrl ? (
-              <img src={gig.createdBy.avatarUrl} className="w-6 h-6 rounded-full object-cover ring-2 ring-zinc-800" alt="" />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-zinc-700 flex items-center justify-center text-[10px] text-zinc-400 font-medium">
-                {(gig.createdBy.username || gig.createdBy.name || "?")[0].toUpperCase()}
-              </div>
-            )}
-            <span className="text-xs text-zinc-400">
-              {gig.createdBy.username || gig.createdBy.name || "Anonymous"}
-            </span>
+      ) : (
+        creatorEl && (
+          <div className="px-6 pb-3">
+            {creatorEl}
+          </div>
+        )
+      )}
+
+      {/* Title row with share + owner actions */}
+      <div className="px-6 pt-4 pb-2 flex items-start justify-between gap-3">
+        <h2 className="text-2xl font-normal text-white leading-snug flex-1">{gig.title}</h2>
+        <div className="flex items-center gap-1.5 shrink-0 mt-1">
+          <ShareMenu type="gig" id={gig.id} isLoggedIn={isLoggedIn} />
+          {isOwner && (
+            <>
+              <button onClick={onEdit} className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition" aria-label="Edit">
+                <Pencil size={15} />
+              </button>
+              <button onClick={onDelete} disabled={deleting} className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition disabled:opacity-50" aria-label="Delete">
+                {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Type */}
+      {gig.type && (
+        <div className="px-6 pb-3">
+          <span className="text-sm text-zinc-400">{gig.type}</span>
+        </div>
+      )}
+
+      {/* Info rows */}
+      <div className="px-6 flex flex-col gap-3 py-3">
+        <div className="flex items-center gap-4">
+          <MapPin size={16} className="text-zinc-500 shrink-0" />
+          <p className="text-sm text-white">{gig.latitude.toFixed(5)}, {gig.longitude.toFixed(5)}</p>
+        </div>
+
+        {(gig.gigTime || gig.date) && (
+          <div className="flex items-center gap-4">
+            <Calendar size={16} className="text-zinc-500 shrink-0" />
+            <p className="text-sm text-white">{formatDate(gig.gigTime || gig.date)}</p>
+          </div>
+        )}
+
+        {gig.expiresAt && (
+          <div className="flex items-center gap-4">
+            <Clock size={16} className="text-zinc-500 shrink-0" />
+            <p className="text-sm text-white">Expires {formatDate(gig.expiresAt)}</p>
+          </div>
+        )}
+
+        {gig.reward && (
+          <div className="flex items-center gap-4">
+            <Award size={16} className="text-zinc-500 shrink-0" />
+            <p className="text-sm text-white">{gig.reward}</p>
           </div>
         )}
       </div>
 
       {/* Description */}
       {gig.description && (
-        <p className="text-sm text-zinc-300 leading-relaxed">{gig.description}</p>
-      )}
-
-      {/* Info cards */}
-      <div className="flex flex-col gap-2">
-        {gig.reward && (
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/50 border border-zinc-800">
-            <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-              <Award size={14} className="text-green-400" />
-            </div>
-            <div>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Reward</p>
-              <p className="text-sm text-white">{gig.reward}</p>
-            </div>
-          </div>
-        )}
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/50 border border-zinc-800">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-            <Calendar size={14} className="text-blue-400" />
-          </div>
-          <div>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Gig Time</p>
-            <p className="text-sm text-white">{formatDate(gig.gigTime || gig.date)}</p>
-          </div>
-        </div>
-        {gig.expiresAt && (
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/50 border border-zinc-800">
-            <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-              <Clock size={14} className="text-orange-400" />
-            </div>
-            <div>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Expires</p>
-              <p className="text-sm text-white">{formatDate(gig.expiresAt)}</p>
-            </div>
-          </div>
-        )}
-        {gig.latitude && gig.longitude && (
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/50 border border-zinc-800">
-            <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-              <MapPin size={14} className="text-red-400" />
-            </div>
-            <div>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Location</p>
-              <p className="text-sm text-white">{gig.latitude.toFixed(4)}, {gig.longitude.toFixed(4)}</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <p className="text-[10px] text-zinc-600">
-        Created {formatDate(gig.createdAt)}
-      </p>
-
-      {/* Owner actions */}
-      {isOwner && (
-        <div className="flex gap-3 pt-3 border-t border-zinc-800">
-          <button
-            onClick={onEdit}
-            className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-sm transition"
-          >
-            <Pencil size={14} /> Edit
-          </button>
-          <button
-            onClick={onDelete}
-            disabled={deleting}
-            className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm transition disabled:opacity-50"
-          >
-            {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
+        <div className="px-6 py-3">
+          <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{gig.description}</p>
         </div>
       )}
+
+      <div className="h-6" />
     </div>
   );
 }
 
-/* ─── Edit view ─── */
+/* ─── Edit View (modal overlay style, same as create/gig form) ─── */
 function EditView({ gig, onCancel, onSave }: {
   gig: Gig; onCancel: () => void;
   onSave: (payload: UpdateGigPayload) => Promise<void>;
 }) {
-  const [form, setForm] = useState({
-    title: gig.title,
-    description: gig.description || "",
-    reward: gig.reward || "",
-    type: gig.type || GIG_TYPES[0],
-  });
+  const [form, setForm] = useState({ title: gig.title, description: gig.description || "", reward: gig.reward || "", type: gig.type || GIG_TYPES[0] });
   const [imageUrls, setImageUrls] = useState<string[]>(gig.imageUrls || []);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -316,309 +233,157 @@ function EditView({ gig, onCancel, onSave }: {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
-  };
-
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
   const handleFiles = async (files: FileList | File[]) => {
-    const fileArray = Array.from(files).filter((f) => f.type.startsWith("image/"));
-    if (fileArray.length === 0) return;
-    setUploading(true);
-    setError(null);
-    try {
-      const urls = await Promise.all(fileArray.map(uploadFile));
-      setImageUrls((prev) => [...prev, ...urls]);
-    } catch (err: any) {
-      setError(err.message || "Failed to upload image");
-    } finally {
-      setUploading(false);
-    }
+    const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (!arr.length) return;
+    setUploading(true); setError(null);
+    try { const urls = await Promise.all(arr.map(uploadFile)); setImageUrls((p) => [...p, ...urls]); }
+    catch (err: any) { setError(err.message || "Upload failed"); }
+    finally { setUploading(false); }
   };
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      handleFiles(e.target.files);
-      e.target.value = "";
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files);
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setImageUrls((prev) => prev.filter((_, i) => i !== index));
-  };
-
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files?.length) { handleFiles(e.target.files); e.target.value = ""; } };
+  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files); };
+  const removeImage = (i: number) => setImageUrls((p) => p.filter((_, idx) => idx !== i));
   const handleSave = async () => {
     if (!form.title.trim()) { setError("Title is required"); return; }
-    setSaving(true);
-    setError(null);
-    try {
-      await onSave({
-        title: form.title,
-        description: form.description,
-        reward: form.reward,
-        type: form.type,
-        imageUrls,
-      });
-    } catch (err: any) {
-      setError(err.message || "Failed to save");
-      setSaving(false);
-    }
+    setSaving(true); setError(null);
+    try { await onSave({ title: form.title, description: form.description, reward: form.reward, type: form.type, imageUrls }); }
+    catch (err: any) { setError(err.message || "Failed"); setSaving(false); }
   };
 
-  const inputClass = "w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white text-sm outline-none focus:ring-1 focus:ring-green-500/50 focus:border-green-500/50 transition";
+  const inputClass = "w-full p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white text-sm outline-none focus:border-zinc-600 transition placeholder:text-zinc-600";
 
   return (
-    <div className="flex flex-col gap-4">
-      {error && (
-        <div className="p-3 rounded-xl bg-red-500/10 text-red-400 text-xs text-center border border-red-500/20">{error}</div>
-      )}
-
-      <div className="flex flex-col gap-1">
-        <label className="text-zinc-400 text-xs">Title *</label>
-        <input name="title" value={form.title} onChange={handleChange} className={inputClass} />
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-3 shrink-0">
+        <button onClick={onCancel} className="text-zinc-400 hover:text-white text-sm transition">Cancel</button>
+        <span className="text-sm font-medium text-white">Edit Gig</span>
+        <button onClick={handleSave} disabled={saving || uploading} className="text-sm font-medium text-white hover:text-zinc-300 transition disabled:opacity-50">
+          {saving ? "..." : "Save"}
+        </button>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-zinc-400 text-xs">Description</label>
-        <textarea name="description" value={form.description} onChange={handleChange} rows={3} className={`${inputClass} resize-none`} />
-      </div>
+      {/* Scrollable form */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-6">
+        <div className="flex flex-col gap-4">
+          {error && <div className="p-2.5 rounded-xl bg-red-500/10 text-red-400 text-xs text-center">{error}</div>}
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1">
-          <label className="text-zinc-400 text-xs">Reward</label>
-          <input name="reward" value={form.reward} onChange={handleChange} className={inputClass} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-zinc-400 text-xs">Type</label>
-          <select name="type" value={form.type} onChange={handleChange} className={`${inputClass} appearance-none`}>
-            {GIG_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {/* Image upload */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-zinc-400 text-xs">Photos</label>
-
-        {imageUrls.length > 0 ? (
-          <div
-            onDrop={handleDrop}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }}
-            className={`flex gap-2 flex-wrap p-2 rounded-xl border-2 border-dashed transition ${
-              dragOver ? "border-green-500 bg-green-500/10" : "border-transparent"
-            }`}
-          >
-            {imageUrls.map((url, i) => (
-              <div key={i} className="relative group w-16 h-16">
-                <img src={url} alt="" className="w-full h-full rounded-lg object-cover border border-zinc-700" />
-                <button
-                  onClick={() => removeImage(i)}
-                  className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition"
-                >
-                  <X size={10} />
+          {/* Photos */}
+          <div className="flex flex-col gap-2">
+            <span className="text-zinc-400 text-xs">Photos</span>
+            {imageUrls.length > 0 ? (
+              <div onDrop={handleDrop} onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }} className={`flex gap-2 flex-wrap ${dragOver ? "ring-1 ring-zinc-600 rounded-xl p-1" : ""}`}>
+                {imageUrls.map((url, i) => (
+                  <div key={i} className="relative group w-16 h-16">
+                    <img src={url} alt="" className="w-full h-full rounded-lg object-cover" />
+                    <button onClick={() => removeImage(i)} className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-zinc-700 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><X size={8} /></button>
+                  </div>
+                ))}
+                <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="w-16 h-16 rounded-lg border border-dashed border-zinc-700 hover:border-zinc-500 flex items-center justify-center transition">
+                  {uploading ? <Loader2 size={14} className="text-zinc-400 animate-spin" /> : <Upload size={14} className="text-zinc-500" />}
                 </button>
+                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileInput} className="hidden" />
               </div>
-            ))}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="w-16 h-16 rounded-lg border-2 border-dashed border-zinc-700 hover:border-green-500/50 flex items-center justify-center transition"
-            >
-              {uploading ? (
-                <Loader2 size={14} className="text-green-400 animate-spin" />
-              ) : (
-                <Upload size={14} className="text-zinc-500" />
-              )}
-            </button>
-            <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileInput} className="hidden" />
-          </div>
-        ) : (
-          <div
-            onDrop={handleDrop}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }}
-            onClick={() => fileInputRef.current?.click()}
-            className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-xl border-2 border-dashed cursor-pointer transition ${
-              dragOver ? "border-green-500 bg-green-500/10" : "border-zinc-700 hover:border-green-500/50 hover:bg-zinc-800/50"
-            }`}
-          >
-            {uploading ? (
-              <Loader2 size={20} className="text-green-400 animate-spin" />
             ) : (
-              <Upload size={20} className={`${dragOver ? "text-green-400" : "text-zinc-600"} transition`} />
+              <div onDrop={handleDrop} onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }} onClick={() => fileInputRef.current?.click()} className={`flex flex-col items-center gap-1.5 p-5 rounded-xl border border-dashed cursor-pointer transition ${dragOver ? "border-zinc-500 bg-zinc-800/50" : "border-zinc-800 hover:border-zinc-600"}`}>
+                {uploading ? <Loader2 size={18} className="text-zinc-400 animate-spin" /> : <Upload size={18} className="text-zinc-500" />}
+                <p className="text-xs text-zinc-500">{uploading ? "Uploading..." : "Drop or click to add"}</p>
+                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileInput} className="hidden" />
+              </div>
             )}
-            <p className="text-[11px] text-zinc-500 text-center">
-              {uploading ? "Uploading..." : "Click or drag & drop images"}
-            </p>
-            <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileInput} className="hidden" />
           </div>
-        )}
-      </div>
 
-      <div className="flex gap-3 pt-2">
-        <button onClick={onCancel} className="flex-1 p-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-sm transition">
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={saving || uploading}
-          className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-green-500 hover:bg-green-600 text-white text-sm transition disabled:opacity-50"
-        >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-          {saving ? "Saving..." : "Save"}
-        </button>
+          <input name="title" value={form.title} onChange={handleChange} placeholder="Title" className={inputClass} />
+          <textarea name="description" value={form.description} onChange={handleChange} rows={4} placeholder="Description" className={`${inputClass} resize-none`} />
+          <div className="grid grid-cols-2 gap-3">
+            <input name="reward" value={form.reward} onChange={handleChange} placeholder="Reward" className={inputClass} />
+            <select name="type" value={form.type} onChange={handleChange} className={`${inputClass} appearance-none`}>
+              {GIG_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ─── Main GigDetail export ─── */
-export default function GigDetail({ gig, isOwner, onClose, onUpdated, onDeleted }: GigDetailProps) {
+/* ─── Main Export ─── */
+export default function GigDetail({ gig, isOwner, onClose, onUpdated, onDeleted, isLoggedIn = false }: GigDetailProps) {
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [deleting, setDeleting] = useState(false);
   const [currentGig, setCurrentGig] = useState(gig);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const handleDelete = async () => {
-    if (!confirm("Delete this gig? This can't be undone.")) return;
+    if (!confirm("Delete this gig?")) return;
     setDeleting(true);
-    try {
-      await deleteGig(currentGig.id);
-      onDeleted(currentGig.id);
-    } catch {
-      setDeleting(false);
-    }
+    try { await deleteGig(currentGig.id); onDeleted(currentGig.id); } catch { setDeleting(false); }
   };
 
   const handleSave = async (payload: UpdateGigPayload) => {
     const updated = await updateGig(currentGig.id, payload);
-    setCurrentGig(updated);
-    onUpdated(updated);
-    setMode("view");
+    setCurrentGig(updated); onUpdated(updated); setMode("view");
   };
 
   const content = (
-    <>
+    <div className="flex flex-col h-full relative">
+      <button onClick={onClose} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/70 transition">
+        <X size={16} />
+      </button>
       {mode === "view" ? (
-        <DetailView
-          gig={currentGig}
-          isOwner={isOwner}
-          onEdit={() => setMode("edit")}
-          onDelete={handleDelete}
-          deleting={deleting}
-          onImageClick={(i) => setLightboxIndex(i)}
-        />
+        <DetailView gig={currentGig} isOwner={isOwner} onEdit={() => setMode("edit")} onDelete={handleDelete} deleting={deleting} onImageClick={(i) => setLightboxIndex(i)} isLoggedIn={isLoggedIn} />
       ) : (
-        <EditView
-          gig={currentGig}
-          onCancel={() => setMode("view")}
-          onSave={handleSave}
-        />
+        <EditView gig={currentGig} onCancel={() => setMode("view")} onSave={handleSave} />
       )}
-    </>
+    </div>
   );
 
   return (
     <>
-      {/* Desktop: right sidebar */}
-      <div className="hidden md:block">
-        <DesktopSidebar onClose={onClose} mode={mode} onBack={() => setMode("view")}>
+      {/* Desktop sidebar */}
+      {!isMobile && (
+        <motion.div
+          initial={{ x: "100%" }}
+          animate={{ x: 0 }}
+          exit={{ x: "100%" }}
+          transition={{ type: "spring", damping: 26, stiffness: 260 }}
+          className="fixed top-0 right-0 bottom-0 w-[420px] lg:w-[480px] z-[1000] bg-zinc-950 border-l border-zinc-800/40"
+        >
           {content}
-        </DesktopSidebar>
-      </div>
+        </motion.div>
+      )}
 
-      {/* Mobile: fullscreen */}
-      <div className="md:hidden">
-        <MobileFullscreen onClose={onClose} mode={mode} onBack={() => setMode("view")}>
-          {content}
-        </MobileFullscreen>
-      </div>
+      {/* Mobile — vaul Drawer */}
+      {isMobile && (
+        <Drawer.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 z-[10000] bg-black/60" />
+            <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[10001] bg-zinc-950 rounded-t-2xl max-h-[85vh] flex flex-col outline-none">
+              <div className="flex justify-center pt-2 pb-1 shrink-0">
+                <div className="w-9 h-1 rounded-full bg-zinc-700" />
+              </div>
+              {content}
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+      )}
 
       {/* Lightbox */}
       <AnimatePresence>
         {lightboxIndex !== null && currentGig.imageUrls.length > 0 && (
-          <Lightbox
-            images={currentGig.imageUrls}
-            startIndex={lightboxIndex}
-            onClose={() => setLightboxIndex(null)}
-          />
+          <Lightbox images={currentGig.imageUrls} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
         )}
       </AnimatePresence>
     </>
-  );
-}
-
-/* ─── Desktop sidebar ─── */
-function DesktopSidebar({ children, onClose, mode, onBack }: {
-  children: React.ReactNode; onClose: () => void; mode: string; onBack: () => void;
-}) {
-  return (
-    <motion.div
-      initial={{ x: "100%" }}
-      animate={{ x: 0 }}
-      exit={{ x: "100%" }}
-      transition={{ type: "spring", damping: 30, stiffness: 300 }}
-      className="fixed top-0 right-0 bottom-0 h-screen w-[480px] z-[1000] bg-zinc-900/95 backdrop-blur-md border-l border-zinc-800 flex flex-col shadow-2xl"
-      data-gig-detail
-    >
-      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-        {mode === "edit" ? (
-          <button onClick={onBack} className="text-zinc-400 hover:text-white text-sm flex items-center gap-1.5 transition">
-            <ArrowLeft size={14} /> Back
-          </button>
-        ) : (
-          <span className="text-sm font-semibold text-white">Gig Details</span>
-        )}
-        <button onClick={onClose} className="p-1.5 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white transition" aria-label="Close">
-          <X size={18} />
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
-        {children}
-      </div>
-    </motion.div>
-  );
-}
-
-/* ─── Mobile fullscreen ─── */
-function MobileFullscreen({ children, onClose, mode, onBack }: {
-  children: React.ReactNode; onClose: () => void; mode: string; onBack: () => void;
-}) {
-  return (
-    <motion.div
-      initial={{ y: "100%" }}
-      animate={{ y: 0 }}
-      exit={{ y: "100%" }}
-      transition={{ type: "spring", damping: 30, stiffness: 300 }}
-      className="fixed inset-0 z-[1000] bg-zinc-900 flex flex-col"
-      data-gig-detail
-    >
-      <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
-        {mode === "edit" ? (
-          <button onClick={onBack} className="text-zinc-400 text-sm flex items-center gap-1">
-            <ArrowLeft size={14} /> Back
-          </button>
-        ) : (
-          <button onClick={onClose} className="text-zinc-400 text-sm flex items-center gap-1">
-            <ArrowLeft size={14} /> Map
-          </button>
-        )}
-        <span className="text-sm font-semibold text-white">
-          {mode === "edit" ? "Edit Gig" : "Gig Details"}
-        </span>
-        <div className="w-12" />
-      </div>
-      <div className="flex-1 overflow-y-auto p-5 pb-24 scrollbar-hide">
-        {children}
-      </div>
-    </motion.div>
   );
 }

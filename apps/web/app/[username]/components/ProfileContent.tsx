@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { UserPublic } from "@/types/user";
 import { MapPin, Calendar, Award, Tag } from "lucide-react";
 
@@ -14,9 +15,9 @@ function formatDate(d: Date | string | null) {
   });
 }
 
-function GigCard({ gig }: { gig: UserPublic["gigs"][number] }) {
+function GigCard({ gig, onClick }: { gig: UserPublic["gigs"][number]; onClick: () => void }) {
   return (
-    <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition space-y-3">
+    <div onClick={onClick} className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition space-y-3 cursor-pointer">
       {/* Image */}
       {gig.imageUrls.length > 0 && (
         <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-800">
@@ -58,6 +59,7 @@ function GigCard({ gig }: { gig: UserPublic["gigs"][number] }) {
 
 export default function ProfileClient({ user }: { user: UserPublic }) {
   const [tab, setTab] = useState<Tab>("recent");
+  const router = useRouter();
 
   return (
     <div className="w-full min-h-screen bg-black text-white">
@@ -151,7 +153,7 @@ export default function ProfileClient({ user }: { user: UserPublic }) {
                 <p className="text-sm text-zinc-600">No gigs yet</p>
               )}
               {user.gigs.map((gig) => (
-                <GigCard key={gig.id} gig={gig} />
+                <GigCard key={gig.id} gig={gig} onClick={() => router.push(`/explore?gig=${gig.id}`)} />
               ))}
             </div>
           )}
@@ -162,7 +164,7 @@ export default function ProfileClient({ user }: { user: UserPublic }) {
                 <p className="text-sm text-zinc-600">No rooms yet</p>
               )}
               {user.rooms.map((room) => (
-                <div key={room.id} className="flex justify-between items-center p-4 rounded-xl bg-zinc-900 border border-zinc-800">
+                <div key={room.id} onClick={() => router.push(`/network/${room.id}`)} className="flex justify-between items-center p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition cursor-pointer">
                   <div>
                     <p className="text-sm font-medium">{room.name}</p>
                     {room.description && (

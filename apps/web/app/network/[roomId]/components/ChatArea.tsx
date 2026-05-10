@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Room, Message } from "@/types/room"
 import { Send, ArrowLeft, Users, Loader2 } from "lucide-react"
+import LinkPreviewCard, { isShareLink } from "./LinkPreviewCard"
 
 interface ChatAreaProps {
   room: Room | null
@@ -224,17 +225,21 @@ export default function ChatArea({
                       {msg.sender?.username || "user"}
                     </p>
                   )}
-                  <div
-                    className={`
-                      px-3.5 py-2 text-[13px] leading-relaxed
-                      ${isOwn
-                        ? "bg-green-600 text-white rounded-2xl rounded-br-md"
-                        : "bg-zinc-800/80 text-zinc-100 rounded-2xl rounded-bl-md"
-                      }
-                    `}
-                  >
-                    <p className="break-words">{msg.content}</p>
-                  </div>
+                  {isShareLink(msg.content) ? (
+                    <LinkPreviewCard content={msg.content} />
+                  ) : (
+                    <div
+                      className={`
+                        px-3.5 py-2 text-[13px] leading-relaxed
+                        ${isOwn
+                          ? "bg-green-600 text-white rounded-2xl rounded-br-md"
+                          : "bg-zinc-800/80 text-zinc-100 rounded-2xl rounded-bl-md"
+                        }
+                      `}
+                    >
+                      <p className="break-words">{msg.content}</p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )

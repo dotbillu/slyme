@@ -256,8 +256,8 @@ const Map = forwardRef<MapHandle, MapProps>(function Map(
 
       <TileLayer
         attribution="&copy; OpenStreetMap contributors"
-        // url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        //url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
       />
 
       {userLocation && mapReady && (
@@ -274,7 +274,8 @@ const Map = forwardRef<MapHandle, MapProps>(function Map(
       {/* Gig markers */}
       {gigs?.map((gig) => {
         if (!gig.latitude || !gig.longitude) return null;
-        const gigIcon = createGigIcon(gig.createdBy?.avatarUrl);
+        const gigImage = gig.imageUrls?.[0] || gig.createdBy?.avatarUrl;
+        const gigIcon = createGigIcon(gigImage);
         return (
           <Marker
             key={gig.id}

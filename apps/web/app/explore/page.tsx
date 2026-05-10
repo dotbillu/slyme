@@ -1,15 +1,17 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Users, LogIn } from "lucide-react";
+import { Drawer } from "vaul";
+import { X, Users, LogIn, MapPin } from "lucide-react";
 import { useAuth } from "@/app/AuthProvider";
 import { Gig } from "@/types/gig";
 import { Room } from "@/types/room";
-import { fetchAllGigs } from "@/services/gig/service";
-import { fetchAllRooms, joinRoom } from "@/services/room/service";
+import { fetchAllGigs, fetchGigById } from "@/services/gig/service";
+import { fetchAllRooms, fetchRoomById, joinRoom } from "@/services/room/service";
+import ShareMenu from "@/app/explore/components/ShareMenu";
 
 const Map = dynamic(() => import("@/app/explore/components/Map"), { ssr: false });
 const GigDetail = dynamic(() => import("@/app/explore/components/GigDetail"), { ssr: false });
@@ -17,6 +19,7 @@ const GigDetail = dynamic(() => import("@/app/explore/components/GigDetail"), { 
 export default function ExplorePage() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // Gigs state
@@ -28,12 +31,18 @@ export default function ExplorePage() {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [joining, setJoining] = useState(false);
 
+  // Track whether we've handled the initial URL params
+  const initialUrlHandled = useRef(false);
+
   // Fetch all gigs
   const loadGigs = useCallback(async () => {
     try {
       const data = await fetchAllGigs();
       setGigs(data);
-    } catch {}
+      return data;
+    } catch {
+      return [];
+    }
   }, []);
 
   // Fetch all rooms
@@ -41,61 +50,82 @@ export default function ExplorePage() {
     try {
       const data = await fetchAllRooms();
       setRooms(data);
-    } catch {}
+      return data;
+    } catch {
+      return [];
+    }
   }, []);
 
-  useEffect(() => { loadGigs(); loadRooms(); }, [loadGigs, loadRooms]);
+  useEffect(() => {
+    const init = async () => {
+      const [loadedGigs, loadedRooms] = await Promise.all([loadGigs(), loadRooms()]);
+
+      if (!initialUrlHandled.current) {
+        initialUrlHandled.current = true;
+        const gigId = searchParams.get("gig");
+        const roomId = searchParams.get("room");
+
+        if (gigId) {
+          const found = loadedGigs.find((g: Gig) => g.id === gigId);
+          if (found) {
+            setSelectedGig(found);
+          } else {
+            try { const gig = await fetchGigById(gigId); setSelectedGig(gig); } catch {}
+          }
+        } else if (roomId) {
+          const found = loadedRooms.find((r: Room) => r.id === roomId);
+          if (found) {
+            setSelectedRoom(found);
+          } else {
+            try { const room = await fetchRoomById(roomId); setSelectedRoom(room); } catch {}
+          }
+        }
+      }
+    };
+    init();
+  }, [loadGigs, loadRooms, searchParams]);
 
   // Geolocation
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      },
-      () => {
-        setUserLocation({ lat: 51.505, lng: -0.09 });
-      },
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => setUserLocation({ lat: 51.505, lng: -0.09 }),
       { enableHighAccuracy: true }
     );
   }, []);
 
+  // URL sync
+  const pushParam = useCallback((key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("gig"); params.delete("room");
+    params.set(key, value);
+    router.replace(`/explore?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
+
+  const clearParams = useCallback(() => {
+    router.replace("/explore", { scroll: false });
+  }, [router]);
+
   // Gig handlers
-  const handleGigClick = useCallback((gig: Gig) => setSelectedGig(gig), []);
-  const handleGigClose = useCallback(() => setSelectedGig(null), []);
-  const handleGigUpdated = useCallback((updated: Gig) => {
-    setGigs((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
-    setSelectedGig(updated);
-  }, []);
-  const handleGigDeleted = useCallback((id: string) => {
-    setGigs((prev) => prev.filter((g) => g.id !== id));
-    setSelectedGig(null);
-  }, []);
+  const handleGigClick = useCallback((gig: Gig) => { setSelectedGig(gig); setSelectedRoom(null); pushParam("gig", gig.id); }, [pushParam]);
+  const handleGigClose = useCallback(() => { setSelectedGig(null); clearParams(); }, [clearParams]);
+  const handleGigUpdated = useCallback((updated: Gig) => { setGigs((prev) => prev.map((g) => (g.id === updated.id ? updated : g))); setSelectedGig(updated); }, []);
+  const handleGigDeleted = useCallback((id: string) => { setGigs((prev) => prev.filter((g) => g.id !== id)); setSelectedGig(null); clearParams(); }, [clearParams]);
 
   // Room handlers
-  const handleRoomClick = useCallback((room: Room) => {
-    setSelectedRoom(room);
-  }, []);
-
-  const handleRoomClose = useCallback(() => {
-    setSelectedRoom(null);
-  }, []);
-
+  const handleRoomClick = useCallback((room: Room) => { setSelectedRoom(room); setSelectedGig(null); pushParam("room", room.id); }, [pushParam]);
+  const handleRoomClose = useCallback(() => { setSelectedRoom(null); clearParams(); }, [clearParams]);
   const handleJoinRoom = useCallback(async () => {
     if (!selectedRoom) return;
     setJoining(true);
     try {
       if (user) {
         const isMember = selectedRoom.members?.some((m) => m.id === user.id);
-        if (!isMember) {
-          await joinRoom(selectedRoom.id);
-        }
+        if (!isMember) await joinRoom(selectedRoom.id);
       }
       router.push(`/network/${selectedRoom.id}`);
-    } catch {
-      // failed
-      setJoining(false);
-    }
+    } catch { setJoining(false); }
   }, [selectedRoom, user, router]);
 
   const avatarUrl = user?.avatarUrl || null;
@@ -103,141 +133,161 @@ export default function ExplorePage() {
 
   return (
     <div className="relative h-screen w-full overflow-hidden">
-      {/* Main map */}
       <div className="absolute inset-0">
-        <Map
-          userLocation={userLocation}
-          avatarUrl={avatarUrl}
-          gigs={gigs}
-          rooms={rooms}
-          onGigClick={handleGigClick}
-          onRoomClick={handleRoomClick}
-        />
+        <Map userLocation={userLocation} avatarUrl={avatarUrl} gigs={gigs} rooms={rooms} onGigClick={handleGigClick} onRoomClick={handleRoomClick} />
       </div>
 
-      {/* Gig detail sidebar / fullscreen */}
       <AnimatePresence>
         {selectedGig && (
-          <GigDetail
-            key={selectedGig.id}
-            gig={selectedGig}
-            isOwner={isOwner(selectedGig)}
-            onClose={handleGigClose}
-            onUpdated={handleGigUpdated}
-            onDeleted={handleGigDeleted}
-          />
+          <GigDetail key={selectedGig.id} gig={selectedGig} isOwner={isOwner(selectedGig)} onClose={handleGigClose} onUpdated={handleGigUpdated} onDeleted={handleGigDeleted} isLoggedIn={!!user} />
         )}
       </AnimatePresence>
 
-      {/* Room detail modal */}
       <AnimatePresence>
         {selectedRoom && (
-          <RoomModal
-            room={selectedRoom}
-            onClose={handleRoomClose}
-            onJoin={handleJoinRoom}
-            joining={joining}
-          />
+          <RoomPanel room={selectedRoom} onClose={handleRoomClose} onJoin={handleJoinRoom} joining={joining} isLoggedIn={!!user} />
         )}
       </AnimatePresence>
     </div>
   );
 }
 
-/* ─── Room Modal ─── */
-function RoomModal({
-  room,
-  onClose,
-  onJoin,
-  joining,
+/* ─── Room Panel ─── */
+function RoomPanel({
+  room, onClose, onJoin, joining, isLoggedIn,
 }: {
-  room: Room;
-  onClose: () => void;
-  onJoin: () => void;
-  joining: boolean;
+  room: Room; onClose: () => void; onJoin: () => void; joining: boolean; isLoggedIn: boolean;
 }) {
   const memberCount = room._count?.members || room.members?.length || 0;
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  const panelContent = (
+    <div className="flex flex-col h-full relative">
+      {/* Close button overlaid */}
+      <button onClick={onClose} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/70 transition">
+        <X size={16} />
+      </button>
+
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide py-4">
+        {/* Image */}
+        <div className="mx-4 rounded-xl overflow-hidden aspect-[16/10] bg-zinc-900">
+          {room.imageUrl ? (
+            <img src={room.imageUrl} alt={room.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
+              <span className="text-6xl font-light text-zinc-700">{room.name.charAt(0).toUpperCase()}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Title + share */}
+        <div className="px-6 pt-4 pb-2 flex items-start justify-between gap-3">
+          <h2 className="text-2xl font-normal text-white leading-snug flex-1">{room.name}</h2>
+          <div className="shrink-0 mt-1">
+            <ShareMenu type="room" id={room.id} isLoggedIn={isLoggedIn} />
+          </div>
+        </div>
+
+        {/* Type */}
+        {room.type && (
+          <div className="px-6 pb-3">
+            <span className="text-sm text-zinc-400">{room.type}</span>
+          </div>
+        )}
+
+        {/* Info */}
+        <div className="px-6 flex flex-col gap-3 py-3">
+          <div className="flex items-center gap-4">
+            <Users size={16} className="text-zinc-500 shrink-0" />
+            <p className="text-sm text-white">{memberCount} {memberCount === 1 ? "member" : "members"}</p>
+          </div>
+
+          {room.description && (
+            <div className="flex items-start gap-4">
+              <MapPin size={16} className="text-zinc-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-zinc-300 leading-relaxed">{room.description}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Creator */}
+        {room.createdBy && (
+          <div className="px-6 py-3 flex items-center gap-3">
+            {room.createdBy.avatarUrl ? (
+              <img src={room.createdBy.avatarUrl} className="w-8 h-8 rounded-full object-cover" alt="" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-sm text-zinc-400">
+                {(room.createdBy.username || room.createdBy.name || "?")[0].toUpperCase()}
+              </div>
+            )}
+            <div>
+              <p className="text-sm text-white">{room.createdBy.username || room.createdBy.name || "Anonymous"}</p>
+              <p className="text-xs text-zinc-500">Creator</p>
+            </div>
+          </div>
+        )}
+
+        <div className="h-6" />
+      </div>
+
+      {/* Join button pinned */}
+      <div className="px-6 py-4 shrink-0">
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={onJoin}
+          disabled={joining}
+          className="w-full py-3 rounded-full bg-white hover:bg-zinc-200 text-black font-medium text-sm flex items-center justify-center gap-2 transition disabled:opacity-50"
+        >
+          {joining ? (
+            <div className="w-4 h-4 border-2 border-zinc-400 border-t-black rounded-full animate-spin" />
+          ) : (
+            <>
+              <LogIn size={15} />
+              Join Room
+            </>
+          )}
+        </motion.button>
+      </div>
+    </div>
+  );
 
   return (
     <>
-      {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[998] bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="fixed z-[999] inset-x-4 top-1/2 -translate-y-1/2 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[360px] bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl"
-      >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 p-1.5 rounded-full bg-zinc-800/80 hover:bg-zinc-700 transition z-10"
+      {/* Desktop sidebar */}
+      {!isMobile && (
+        <motion.div
+          initial={{ x: "100%" }}
+          animate={{ x: 0 }}
+          exit={{ x: "100%" }}
+          transition={{ type: "spring", damping: 26, stiffness: 260 }}
+          className="fixed top-0 right-0 bottom-0 w-[420px] lg:w-[480px] z-[1000] bg-zinc-950 border-l border-zinc-800/40"
         >
-          <X size={18} className="text-zinc-300" />
-        </button>
+          {panelContent}
+        </motion.div>
+      )}
 
-        {/* Room image / gradient header */}
-        <div className="h-32 relative overflow-hidden">
-          {room.imageUrl ? (
-            <img
-              src={room.imageUrl}
-              alt={room.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center">
-              <span className="text-4xl font-bold text-white/80">
-                {room.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
-          {/* Gradient overlay at bottom */}
-          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-zinc-900 to-transparent" />
-        </div>
-
-        {/* Content */}
-        <div className="px-5 pb-5 -mt-2 relative">
-          <h2 className="text-lg font-semibold text-white mb-1">{room.name}</h2>
-
-          {room.description && (
-            <p className="text-sm text-zinc-400 mb-3 line-clamp-3">
-              {room.description}
-            </p>
-          )}
-
-          {/* Members */}
-          <div className="flex items-center gap-2 text-zinc-400 text-sm mb-5">
-            <Users size={16} />
-            <span>{memberCount} {memberCount === 1 ? "member" : "members"}</span>
-          </div>
-
-          {/* Join button */}
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={onJoin}
-            disabled={joining}
-            className="w-full py-3 rounded-xl bg-purple-500 hover:bg-purple-600 text-white font-semibold text-sm flex items-center justify-center gap-2 transition disabled:opacity-50"
-          >
-            {joining ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                <LogIn size={16} />
-                Join Room
-              </>
-            )}
-          </motion.button>
-        </div>
-      </motion.div>
+      {/* Mobile — vaul Drawer */}
+      {isMobile && (
+        <Drawer.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 z-[10000] bg-black/60" />
+            <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[10001] bg-zinc-950 rounded-t-2xl max-h-[85vh] flex flex-col outline-none">
+              <div className="flex justify-center pt-2 pb-1 shrink-0">
+                <div className="w-9 h-1 rounded-full bg-zinc-700" />
+              </div>
+              {panelContent}
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+      )}
     </>
   );
 }
