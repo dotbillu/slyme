@@ -23,8 +23,12 @@ app.use(express.json());
 
 app.use("/auth", authRoutes);
 app.use("/user", userRoutes);
-app.use("/gigs/", gigRoutes);
+app.use("/gigs", gigRoutes);
 app.use("/rooms", roomRoutes);
+
+app.get("/helloboy", (req, res) => {
+  res.status(200).json("slyme up");
+});
 
 const server = http.createServer(app);
 
@@ -32,6 +36,4 @@ initSocket(server);
 
 const PORT = 3001;
 
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+server.listen(PORT);
