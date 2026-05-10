@@ -4,6 +4,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "./AuthProvider";
 import Script from "next/script";
 import ClientNavbar from "@/shared/clients/navbarClient";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Slyme | Social Network",
@@ -43,6 +44,7 @@ export default function RootLayout({
             {children}
           </GoogleOAuthProvider>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );
