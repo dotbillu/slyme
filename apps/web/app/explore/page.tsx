@@ -1,7 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useState, useEffect, useCallback, useRef } from "react";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Drawer } from "vaul";
@@ -12,7 +14,9 @@ import {
   MapPin,
   Pencil,
   ChevronRight,
+  Check,
 } from "lucide-react";
+
 import { useAuth } from "@/app/AuthProvider";
 import { Gig } from "@/types/gig";
 import { Room } from "@/types/room";
@@ -61,6 +65,10 @@ export default function ExplorePage() {
   const [roomsLoaded, setRoomsLoaded] = useAtom(exploreRoomsLoadedAtom);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [joining, setJoining] = useState(false);
+  const [showNudge, setShowNudge] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+
+
 
   // Track whether we've handled the initial URL params
   const initialUrlHandled = useRef(false);
@@ -172,6 +180,31 @@ export default function ExplorePage() {
     );
   }, []);
 
+  // Profile completion nudge
+  useEffect(() => {
+    if (!user) return;
+    
+    const nudgeShownSession = sessionStorage.getItem("slyme_avatar_nudge_shown");
+    const nudgeHiddenPermanent = localStorage.getItem("slyme_avatar_nudge_hidden");
+    
+    if (!user.avatarUrl && !nudgeShownSession && !nudgeHiddenPermanent) {
+      const timer = setTimeout(() => {
+        setShowNudge(true);
+        sessionStorage.setItem("slyme_avatar_nudge_shown", "true");
+      }, 3000); // Show after 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
+  const handleNudgeClose = () => {
+    if (dontShowAgain) {
+      localStorage.setItem("slyme_avatar_nudge_hidden", "true");
+    }
+    setShowNudge(false);
+  };
+
+
+
   // URL sync
   const pushParam = useCallback(
     (key: string, value: string) => {
@@ -184,9 +217,12 @@ export default function ExplorePage() {
     [router, searchParams],
   );
 
-  const clearParams = useCallback(() => {
+  const clearParams  = useCallback(() => {
     router.replace("/explore", { scroll: false });
   }, [router]);
+
+
+
 
   const handleGigClick = useCallback(
     (gig: Gig) => {
@@ -307,7 +343,91 @@ export default function ExplorePage() {
           />
         ) : null}
       </AnimatePresence>
+
+      {/* Profile Completion Nudge */}
+      <AnimatePresence>
+        {showNudge && user && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleNudgeClose}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-[340px] bg-[#1a1a1a]/90 backdrop-blur-2xl border border-white/10 rounded-[32px] p-8 flex flex-col items-center text-center shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)]"
+            >
+              <button
+                onClick={handleNudgeClose}
+                className="absolute top-6 right-6 p-1 text-zinc-500 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="w-16 h-16 flex items-center justify-center mb-6">
+                <Image
+                  src="/slymelogo.png"
+                  alt="Slyme"
+                  width={60}
+                  height={60}
+                  className="object-contain drop-shadow-[0_0_15px_rgba(92,176,56,0.2)]"
+                />
+              </div>
+              
+              <div className="space-y-2 mb-8">
+                <h3 className="text-[18px] font-bold text-white leading-tight px-4">
+                  Tips: Update profile to let people know about you more
+                </h3>
+                <p className="text-zinc-500 text-[13px]">
+                  Complete your profile to build trust.
+                </p>
+              </div>
+
+              <div className="w-full space-y-5">
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    handleNudgeClose();
+                    router.push(`/${user.username}?mode=edit`);
+                  }}
+                  className="w-full bg-[#5cb038] text-white py-3 rounded-[16px] font-bold text-[16px] hover:bg-[#4d942e] transition-all shadow-lg shadow-[#5cb038]/10"
+                >
+                  Edit Profile
+                </motion.button>
+
+                <div className="flex items-center justify-center gap-2">
+                  <div 
+                    onClick={() => setDontShowAgain(!dontShowAgain)}
+                    className={`w-4 h-4 rounded-md border flex items-center justify-center cursor-pointer transition-all ${
+                      dontShowAgain 
+                        ? "bg-[#5cb038] border-[#5cb038]" 
+                        : "border-zinc-700 hover:border-zinc-500 bg-zinc-800/50"
+                    }`}
+                  >
+                    {dontShowAgain && <Check size={12} className="text-white" strokeWidth={4} />}
+                  </div>
+                  <span 
+                    onClick={() => setDontShowAgain(!dontShowAgain)}
+                    className="text-[11px] text-zinc-500 cursor-pointer hover:text-zinc-400 transition-colors select-none font-medium"
+                  >
+                    Don't show again
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+
+          </div>
+        )}
+      </AnimatePresence>
+
+
     </div>
+
   );
 }
 

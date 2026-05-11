@@ -48,7 +48,8 @@ export default function Signup() {
       const user = await CredentialSignUp(form);
 
       setUser(user);
-      router.replace("/explore");
+      router.replace("/ontap");
+
     } catch (err: any) {
       setError(err.message || "Signup failed");
     } finally {
@@ -84,7 +85,8 @@ export default function Signup() {
       const user = await oauthSignUpUser(googleToken, username);
 
       setUser(user);
-      router.replace("/explore");
+      router.replace("/ontap");
+
     } catch (err: any) {
       setError(err.message || "Something went wrong");
     } finally {

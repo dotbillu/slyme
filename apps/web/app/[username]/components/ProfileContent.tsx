@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
 import { UserPublic } from "@/types/user";
 import { MapPin, Calendar, Award, Tag, Pencil, Camera, Loader2, Check, X } from "lucide-react";
 import { useAuth } from "@/app/AuthProvider";
@@ -75,8 +76,10 @@ export default function ProfileClient({ user: initialUser }: { user: UserPublic 
   const [user, setUser] = useState(initialUser);
   const [tab, setTab] = useState<Tab>("recent");
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { user: authUser, setUser: setAuthUser } = useAuth();
+
   const isOwner = authUser?.username === user.username;
 
   const [isEditing, setIsEditing] = useState(false);
@@ -94,6 +97,17 @@ export default function ProfileClient({ user: initialUser }: { user: UserPublic 
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (searchParams.get("mode") === "edit" && isOwner) {
+      setIsEditing(true);
+      // Clean up URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete("mode");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [searchParams, isOwner]);
+
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

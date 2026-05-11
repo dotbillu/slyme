@@ -373,9 +373,9 @@ export default function Navbar() {
                 transition={{ duration: 0.15 }}
                 className="absolute bottom-full left-0 ml-3 mb-2 w-[260px] bg-[#262626] rounded-2xl overflow-hidden shadow-2xl z-[200]"
               >
-                <div className="py-2">
+                <div>
                   {/* For now, just one button */}
-                  <div className="px-2">
+                  <div>
                     <button
                       onClick={async () => {
                         try {
@@ -383,7 +383,7 @@ export default function Navbar() {
                         } catch (err) {
                           console.error("Signout error:", err);
                         }
-                        setUser(null);
+                        setUser(null); router.push("/signin");
                       }}
                       className="w-full text-left px-4 py-3.5 text-[15px] text-white hover:bg-white/10 rounded-xl transition"
                     >
