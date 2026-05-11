@@ -40,6 +40,11 @@ export default function Signup() {
       setLoading(true);
       setError(null);
 
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(form.email)) {
+        throw new Error("Invalid email address");
+      }
+
       const user = await CredentialSignUp(form);
 
       setUser(user);

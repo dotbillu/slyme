@@ -30,6 +30,7 @@ export default function RecoverPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const handleSendOtp = async () => {
     if (!credential) return;
@@ -38,6 +39,16 @@ export default function RecoverPage() {
     try {
       await sendRecoveryOtp(credential);
       setShowOtp(true);
+      setResendCooldown(60);
+      const timer = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } catch (err: any) {
       setError(err.message || "Failed to send OTP");
     } finally {
@@ -152,6 +163,19 @@ export default function RecoverPage() {
                     >
                       {loading ? "Verifying..." : "Verify OTP"}
                     </motion.button>
+
+                    <div className="w-full text-center">
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={loading || resendCooldown > 0}
+                        className="text-sm text-zinc-400 hover:text-green-400 transition-colors disabled:opacity-50 disabled:hover:text-zinc-400"
+                      >
+                        {resendCooldown > 0
+                          ? `Resend OTP in ${resendCooldown}s`
+                          : "Resend OTP"}
+                      </button>
+                    </div>
                   </motion.div>
                 )}
 

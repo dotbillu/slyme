@@ -14,15 +14,22 @@ import { cookieOptions } from "../../../lib/cookie";
 
 router.post("/credentials", async (req, res) => {
   const { name, username, password, email } = req.body;
+
   const isValidUsername = /^[a-zA-Z0-9_]+$/.test(username);
   if (!isValidUsername) {
     return res
       .status(400)
-      .json({ error: "invalid username,dont use special charecters" });
+      .json({ error: "Invalid username, don't use special characters" });
   }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: "Invalid email address" });
+  }
+
   let user = await getUserbyEmail(email);
   if (user) {
-    return res.status(403).json({ error: "username already exists" });
+    return res.status(403).json({ error: "Email already exists" });
   }
   user = await createUserByCredentials({ name, username, password, email });
   const appToken = generateToken(user);
