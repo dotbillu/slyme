@@ -92,3 +92,38 @@ export async function getMe(): Promise<UserPublic> {
 
   return handleResponse(res);
 }
+
+export async function sendRecoveryOtp(
+  cred: string,
+): Promise<{ success: boolean }> {
+  const res = await fetch(`${API_BASE}/auth/recover/get-otp/${cred}`, {
+    method: "POST",
+  });
+  return handleResponse(res);
+}
+
+export async function verifyRecoveryOtp(
+  cred: string,
+  otp: string,
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/auth/recover/verify-otp/${cred}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ otp }),
+    credentials: "include",
+  });
+  return handleResponse(res);
+}
+
+export async function resetPasswordRecover(
+  cred: string,
+  password: string,
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/auth/recover/reset-password/${cred}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  return handleResponse(res);
+}

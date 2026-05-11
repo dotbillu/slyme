@@ -114,6 +114,15 @@ export default function Login() {
             className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
           />
 
+          <div className="w-full flex justify-end -mt-3 -ml-6">
+            <span
+              onClick={() => router.push("/recover")}
+              className="text-zinc-500 text-xs cursor-pointer hover:underline"
+            >
+              Forgot password?
+            </span>
+          </div>
+
           <motion.button
             onClick={handleLogin}
             disabled={loading}
