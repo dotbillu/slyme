@@ -11,6 +11,7 @@ import {
   getUserbyUsername,
 } from "../../../services/auth/services";
 import { cookieOptions } from "../../../lib/cookie";
+import { sendWelcomeEmail } from "../../../services/auth/email/service";
 
 router.post("/credentials", async (req, res) => {
   const { name, username, password, email } = req.body;
@@ -35,6 +36,8 @@ router.post("/credentials", async (req, res) => {
   const appToken = generateToken(user);
   res.cookie("token", appToken, cookieOptions);
 
+  sendWelcomeEmail(user);
+
   return res.json({ message: "Auth success", user });
 });
 
@@ -56,6 +59,8 @@ router.post("/oauth/create-user", verifyGoogleToken, async (req, res) => {
   user = await createUserOauth(payload, username);
   const appToken = generateToken(user);
   res.cookie("token", appToken, cookieOptions);
+
+  sendWelcomeEmail(user);
 
   return res.json({ message: "Auth success", user });
 });

@@ -1,9 +1,7 @@
 import { prisma } from "../../../lib/prisma";
 import jwt from "jsonwebtoken";
-import { Resend } from "resend";
+import { resend } from "../../../lib/resend";
 import bcrypt from "bcrypt";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 function isEmail(str: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
@@ -59,7 +57,7 @@ export async function sendOtp(cred: string) {
         style="width:64px; height:64px; object-fit:contain; margin-bottom:16px;"
       />
 
-      <h2 style="margin-bottom:10px;">Password Reset OTP</h2>
+      <h2 style="margin-bottom:10px;">Password Reset</h2>
 
       <p style="color:#555; font-size:14px;">
         Use this code to continue. It expires in 10 minutes.

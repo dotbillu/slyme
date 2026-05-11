@@ -6,6 +6,7 @@ import { verifyGoogleToken } from "../../../middlewares/auth/oauth";
 import { generateToken, getUserbyEmail } from "../../../services/auth/services";
 import { validateCredentials } from "../../../middlewares/auth/credentials";
 import { cookieOptions } from "../../../lib/cookie";
+import { sendWelcomeBackEmail } from "../../../services/auth/email/service";
 
 router.post("/oauth", verifyGoogleToken, async (req, res) => {
   const payload = (req as any).googlePayload;
@@ -17,6 +18,8 @@ router.post("/oauth", verifyGoogleToken, async (req, res) => {
   const appToken = generateToken(user);
   res.cookie("token", appToken, cookieOptions);
 
+  sendWelcomeBackEmail(user);
+
   return res.json({ message: "Auth success", user });
 });
 
@@ -24,6 +27,8 @@ router.post("/credentials", validateCredentials, async (req, res) => {
   const user = (req as any).user;
   const appToken = generateToken(user);
   res.cookie("token", appToken, cookieOptions);
+
+  sendWelcomeBackEmail(user);
 
   return res.json({ message: "Auth success", user });
 });
