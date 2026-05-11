@@ -45,14 +45,47 @@ export async function sendOtp(cred: string) {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     },
   });
-
   await resend.emails.send({
     from: "Slyme <noreply@dotbillu.in>",
     to: email,
     subject: "Your OTP Code",
-    html: `<h1>${otp}</h1>`,
-  });
+    html: `
+  <div style="font-family: Arial, sans-serif; background:#f6f6f6; padding:20px;">
+    <div style="max-width:420px; margin:auto; background:white; padding:24px; border-radius:12px; text-align:center;">
+      
+      <img
+        src="https://slyme.dotbillu.in/slymelogo.png"
+        alt="Slyme"
+        style="width:64px; height:64px; object-fit:contain; margin-bottom:16px;"
+      />
 
+      <h2 style="margin-bottom:10px;">Password Reset OTP</h2>
+
+      <p style="color:#555; font-size:14px;">
+        Use this code to continue. It expires in 10 minutes.
+      </p>
+
+      <div style="
+        font-size:28px;
+        letter-spacing:6px;
+        font-weight:bold;
+        margin:20px 0;
+        padding:12px;
+        background:#f3f4f6;
+        border-radius:8px;
+        user-select:all;
+      ">
+        ${otp}
+      </div>
+
+      <p style="font-size:12px; color:#888;">
+        If you didn’t request this,best of luck.
+      </p>
+
+    </div>
+  </div>
+  `,
+  });
   return true;
 }
 export async function verifyOtp(cred: string, otp: string) {
