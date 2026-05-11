@@ -11,6 +11,7 @@ import {
   oauthSignUpUser,
 } from "@/services/auth/service";
 import { useAuth } from "@/app/AuthProvider";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function Signup() {
   const { setUser } = useAuth();
@@ -28,6 +29,7 @@ export default function Signup() {
   const [username, setUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e: any) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -146,13 +148,22 @@ export default function Signup() {
 
             <div className="w-full flex flex-col gap-1">
               <label className="text-zinc-400 text-sm">Password</label>
-              <input
-                type="password"
-                name="password"
-                onChange={handleChange}
-                placeholder="password"
-                className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  onChange={handleChange}
+                  placeholder="password"
+                  className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
 
             <motion.button

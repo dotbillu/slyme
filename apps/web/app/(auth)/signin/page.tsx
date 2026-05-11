@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CredentialSignIn, oauthSignIn } from "@/services/auth/service";
 import { useAuth } from "@/app/AuthProvider";
+import { Eye, EyeOff } from "lucide-react";
 
 type SigninModel = {
   username: string;
@@ -24,6 +25,7 @@ export default function Login() {
   const [credError, setCredError] = useState<string | null>(null);
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (checked && user) {
@@ -104,15 +106,24 @@ export default function Login() {
             className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
           />
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={details.password}
-            onChange={(e) =>
-              setDetails((p) => ({ ...p, password: e.target.value }))
-            }
-            className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
-          />
+          <div className="w-full relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={details.password}
+              onChange={(e) =>
+                setDetails((p) => ({ ...p, password: e.target.value }))
+              }
+              className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
 
           <div className="w-full flex justify-end -mt-3 -ml-6">
             <span

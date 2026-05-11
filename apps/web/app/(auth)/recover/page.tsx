@@ -9,6 +9,7 @@ import {
   verifyRecoveryOtp,
   resetPasswordRecover,
 } from "@/services/auth/service";
+import { Eye, EyeOff } from "lucide-react";
 
 enum RecoverStep {
   IDENTIFY = "IDENTIFY",
@@ -27,6 +28,8 @@ export default function RecoverPage() {
   const [showOtp, setShowOtp] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSendOtp = async () => {
     if (!credential) return;
@@ -173,23 +176,48 @@ export default function RecoverPage() {
                 exit={{ opacity: 0, x: -20 }}
                 className="w-full flex flex-col gap-4"
               >
-                <input
-                  type="password"
-                  placeholder="New Password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
-                />
-                <input
-                  type="password"
-                  placeholder="Confirm New Password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
-                />
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="New Password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                  >
+                    {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm New Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={20} />
+                    ) : (
+                      <Eye size={20} />
+                    )}
+                  </button>
+                </div>
                 <motion.button
                   onClick={handleResetPassword}
-                  disabled={loading || !newPassword || newPassword !== confirmPassword}
+                  disabled={
+                    loading || !newPassword || newPassword !== confirmPassword
+                  }
                   whileTap={{ scale: 0.98 }}
                   className="w-full bg-green-500 text-white p-3 rounded-md font-semibold disabled:opacity-50"
                 >
@@ -231,14 +259,12 @@ export default function RecoverPage() {
             )}
           </AnimatePresence>
 
-          {step !== RecoverStep.SUCCESS && (
             <p
               onClick={() => router.replace("/signin")}
-              className="text-zinc-500 text-sm cursor-pointer hover:text-zinc-300 transition-colors"
+              className="absolute bottom-10 text-zinc-500 text-sm cursor-pointer hover:text-zinc-300 transition-colors"
             >
               Wait, I remember my password
             </p>
-          )}
         </div>
       </motion.div>
     </div>
