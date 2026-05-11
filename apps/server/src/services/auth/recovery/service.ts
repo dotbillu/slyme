@@ -1,36 +1,40 @@
 import { prisma } from "../../../lib/prisma";
+import jwt from "jsonwebtoken";
 import { Resend } from "resend";
+import bcrypt from "bcrypt";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-
-function generateOtp() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
 
 function isEmail(str: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
 }
 
-async function resolveEmail(cred: string) {
-  if (isEmail(cred)) return cred;
-
-  const user = await prisma.user.findUnique({
-    where: { username: cred },
-    select: { email: true },
-  });
-
-  return user?.email || null;
+function generateOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export async function sendOtp(cred: string) {
-  const email = await resolveEmail(cred);
-  if (!email) throw new Error("User not found");
+async function resolveUser(cred: string) {
+  if (isEmail(cred)) {
+    return prisma.user.findUnique({
+      where: { email: cred },
+    });
+  }
 
-  await prisma.passwordReset.updateMany({
-    where: { email, used: false },
-    data: { used: true },
+  return prisma.user.findUnique({
+    where: { username: cred },
   });
+}
 
+export function generateTempToken(user: { id: string }) {
+  return jwt.sign({ id: user.id, type: "otp_temp" }, process.env.JWT_SECRET!, {
+    expiresIn: "5m",
+  });
+}
+export async function sendOtp(cred: string) {
+  const user = await resolveUser(cred);
+  if (!user) throw new Error("User not found");
+
+  const email = user.email;
   const otp = generateOtp();
 
   await prisma.passwordReset.create({
@@ -51,25 +55,35 @@ export async function sendOtp(cred: string) {
 
   return true;
 }
-
 export async function verifyOtp(cred: string, otp: string) {
-  const email = await resolveEmail(cred);
-  if (!email) return false;
+  const user = await resolveUser(cred);
+  if (!user) return false;
 
   const record = await prisma.passwordReset.findFirst({
-    where: { email, used: false },
+    where: { email: user.email, used: false },
     orderBy: { createdAt: "desc" },
   });
 
   if (!record) return false;
-
   if (record.expiresAt < new Date()) return false;
-
   if (record.otp !== otp) return false;
 
   await prisma.passwordReset.update({
     where: { id: record.id },
     data: { used: true },
+  });
+
+  return user;
+}
+export async function resetPassword(cred: string, newPassword: string) {
+  const user = await resolveUser(cred);
+  if (!user) throw new Error("User not found");
+
+  const hashed = await bcrypt.hash(newPassword, 10);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { password: hashed },
   });
 
   return true;
