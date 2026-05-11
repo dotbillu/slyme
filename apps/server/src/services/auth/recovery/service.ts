@@ -44,7 +44,7 @@ export async function sendOtp(cred: string) {
     },
   });
   await resend.emails.send({
-    from: "Slyme <noreply@dotbillu.in>",
+    from: "Slyme <slyme-noreply@dotbillu.in>",
     to: email,
     subject: "Your OTP Code",
     html: `
