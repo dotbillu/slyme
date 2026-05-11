@@ -68,8 +68,6 @@ export default function ExplorePage() {
   const [showNudge, setShowNudge] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
-
-
   // Track whether we've handled the initial URL params
   const initialUrlHandled = useRef(false);
 
@@ -183,15 +181,22 @@ export default function ExplorePage() {
   // Profile completion nudge
   useEffect(() => {
     if (!user) return;
-    
-    const nudgeShownSession = sessionStorage.getItem("slyme_avatar_nudge_shown");
-    const nudgeHiddenPermanent = localStorage.getItem("slyme_avatar_nudge_hidden");
-    
-    if (!user.avatarUrl && !nudgeShownSession && !nudgeHiddenPermanent) {
+
+    const nudgeShownSession = sessionStorage.getItem(
+      "slyme_avatar_nudge_shown",
+    );
+    const nudgeHiddenPermanent = localStorage.getItem(
+      "slyme_avatar_nudge_hidden",
+    );
+
+    if (
+      !user.avatarUrl ||
+      (!user.bio && !nudgeShownSession && !nudgeHiddenPermanent)
+    ) {
       const timer = setTimeout(() => {
         setShowNudge(true);
         sessionStorage.setItem("slyme_avatar_nudge_shown", "true");
-      }, 3000); // Show after 3 seconds
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [user]);
@@ -202,8 +207,6 @@ export default function ExplorePage() {
     }
     setShowNudge(false);
   };
-
-
 
   // URL sync
   const pushParam = useCallback(
@@ -217,12 +220,9 @@ export default function ExplorePage() {
     [router, searchParams],
   );
 
-  const clearParams  = useCallback(() => {
+  const clearParams = useCallback(() => {
     router.replace("/explore", { scroll: false });
   }, [router]);
-
-
-
 
   const handleGigClick = useCallback(
     (gig: Gig) => {
@@ -355,7 +355,7 @@ export default function ExplorePage() {
               onClick={handleNudgeClose}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
-            
+
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -378,7 +378,7 @@ export default function ExplorePage() {
                   className="object-contain drop-shadow-[0_0_15px_rgba(92,176,56,0.2)]"
                 />
               </div>
-              
+
               <div className="space-y-2 mb-8">
                 <h3 className="text-[18px] font-bold text-white leading-tight px-4">
                   Tips: Update profile to let people know about you more
@@ -401,17 +401,19 @@ export default function ExplorePage() {
                 </motion.button>
 
                 <div className="flex items-center justify-center gap-2">
-                  <div 
+                  <div
                     onClick={() => setDontShowAgain(!dontShowAgain)}
                     className={`w-4 h-4 rounded-md border flex items-center justify-center cursor-pointer transition-all ${
-                      dontShowAgain 
-                        ? "bg-[#5cb038] border-[#5cb038]" 
+                      dontShowAgain
+                        ? "bg-[#5cb038] border-[#5cb038]"
                         : "border-zinc-700 hover:border-zinc-500 bg-zinc-800/50"
                     }`}
                   >
-                    {dontShowAgain && <Check size={12} className="text-white" strokeWidth={4} />}
+                    {dontShowAgain && (
+                      <Check size={12} className="text-white" strokeWidth={4} />
+                    )}
                   </div>
-                  <span 
+                  <span
                     onClick={() => setDontShowAgain(!dontShowAgain)}
                     className="text-[11px] text-zinc-500 cursor-pointer hover:text-zinc-400 transition-colors select-none font-medium"
                   >
@@ -420,14 +422,10 @@ export default function ExplorePage() {
                 </div>
               </div>
             </motion.div>
-
           </div>
         )}
       </AnimatePresence>
-
-
     </div>
-
   );
 }
 
@@ -505,17 +503,25 @@ function RoomPanel({
         {/* Image */}
         <div className="mx-4 rounded-xl overflow-hidden aspect-[16/10] bg-zinc-900">
           {room.imageUrl ? (
-            <img src={room.imageUrl} alt={room.name} className="w-full h-full object-cover" />
+            <img
+              src={room.imageUrl}
+              alt={room.name}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
-              <span className="text-6xl font-light text-zinc-700">{room.name.charAt(0).toUpperCase()}</span>
+              <span className="text-6xl font-light text-zinc-700">
+                {room.name.charAt(0).toUpperCase()}
+              </span>
             </div>
           )}
         </div>
 
         {/* Title + share */}
         <div className="px-6 pt-4 pb-1 flex items-start justify-between gap-3">
-          <h2 className="text-2xl font-normal text-white leading-snug flex-1">{room.name}</h2>
+          <h2 className="text-2xl font-normal text-white leading-snug flex-1">
+            {room.name}
+          </h2>
           <div className="shrink-0 mt-1">
             <ShareMenu type="room" id={room.id} isLoggedIn={isLoggedIn} />
           </div>
@@ -524,14 +530,18 @@ function RoomPanel({
         {/* Description */}
         {room.description && (
           <div className="px-6 pb-3">
-            <p className="text-sm text-zinc-400 leading-relaxed">{room.description}</p>
+            <p className="text-sm text-zinc-400 leading-relaxed">
+              {room.description}
+            </p>
           </div>
         )}
 
         {/* Type capsule + members */}
         <div className="px-6 pb-3 flex items-center gap-2 flex-wrap">
           {room.type && (
-            <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300 font-medium">{room.type}</span>
+            <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300 font-medium">
+              {room.type}
+            </span>
           )}
           <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300 font-medium flex items-center gap-1.5">
             <Users size={12} className="text-zinc-500" />
@@ -546,14 +556,22 @@ function RoomPanel({
         {room.createdBy && (
           <div className="px-6 py-3 flex items-center gap-3">
             {room.createdBy.avatarUrl ? (
-              <img src={room.createdBy.avatarUrl} className="w-8 h-8 rounded-full object-cover" alt="" />
+              <img
+                src={room.createdBy.avatarUrl}
+                className="w-8 h-8 rounded-full object-cover"
+                alt=""
+              />
             ) : (
               <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-sm text-zinc-400">
-                {(room.createdBy.username || room.createdBy.name || "?")[0].toUpperCase()}
+                {(room.createdBy.username ||
+                  room.createdBy.name ||
+                  "?")[0].toUpperCase()}
               </div>
             )}
             <div>
-              <p className="text-sm text-white">{room.createdBy.username || room.createdBy.name || "Anonymous"}</p>
+              <p className="text-sm text-white">
+                {room.createdBy.username || room.createdBy.name || "Anonymous"}
+              </p>
               <p className="text-xs text-zinc-500">Creator</p>
             </div>
           </div>
@@ -617,7 +635,12 @@ function RoomPanel({
 
       {/* Mobile — vaul Drawer */}
       {isMobile && (
-        <Drawer.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+        <Drawer.Root
+          open
+          onOpenChange={(open) => {
+            if (!open) onClose();
+          }}
+        >
           <Drawer.Portal>
             <Drawer.Overlay className="fixed inset-0 z-[10000] bg-black/60" />
             <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[10001] bg-zinc-950 rounded-t-2xl max-h-[85vh] flex flex-col outline-none overflow-hidden">
@@ -636,7 +659,10 @@ function RoomPanel({
           <EditRoomModal
             room={room}
             onClose={() => setShowEdit(false)}
-            onUpdated={(updated) => { onUpdated(updated); setShowEdit(false); }}
+            onUpdated={(updated) => {
+              onUpdated(updated);
+              setShowEdit(false);
+            }}
             onDeleted={onDeleted}
           />
         )}
