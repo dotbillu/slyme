@@ -100,3 +100,14 @@ model MessageSeen {
   @@unique([userId, messageId])
   @@index([messageId])
 }
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
