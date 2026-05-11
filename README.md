@@ -1,4 +1,12 @@
-# 🌐 Slyme
+<div align="center">
+  <img
+    src="https://slyme.dotbillu.in/slymelogo.png"
+    width="60"
+    height="60"
+  />
+
+  <h1>SLYME</h1>
+</div>
 
 **Slyme** is a high-performance, map-based social ecosystem designed for local community engagement. It transforms physical coordinates into digital hubs, allowing users to discover "MapRooms" and local "Gigs" in real-time.
 
