@@ -44,6 +44,7 @@ const getBaseTemplate = (title: string, message: string, user: UserPublic) => `
 `;
 
 export async function sendWelcomeEmail(user: UserPublic) {
+  if (!user.email) return;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -52,7 +53,7 @@ export async function sendWelcomeEmail(user: UserPublic) {
       html: getBaseTemplate(
         "Welcome to the community!",
         "We're excited to have you on board. Start exploring the network and connect with others.",
-        user
+        user,
       ),
     });
   } catch (error) {
@@ -61,6 +62,7 @@ export async function sendWelcomeEmail(user: UserPublic) {
 }
 
 export async function sendWelcomeBackEmail(user: UserPublic) {
+  if (!user.email) return;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -69,7 +71,7 @@ export async function sendWelcomeBackEmail(user: UserPublic) {
       html: getBaseTemplate(
         "Welcome back!",
         "Good to see you again. Check out what's new on Slyme today.",
-        user
+        user,
       ),
     });
   } catch (error) {
