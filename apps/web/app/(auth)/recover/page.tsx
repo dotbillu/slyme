@@ -201,7 +201,6 @@ export default function RecoverPage() {
                     </motion.button>
                   )}
                 </form>
-
               </motion.div>
             )}
 
@@ -274,7 +273,6 @@ export default function RecoverPage() {
                     {loading ? "Updating..." : "Reset Password"}
                   </motion.button>
                 </form>
-
               </motion.div>
             )}
 
@@ -285,21 +283,6 @@ export default function RecoverPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="w-full flex flex-col gap-6 items-center"
               >
-                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-10 h-10 text-green-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
                 <motion.button
                   onClick={() => router.replace("/signin")}
                   whileTap={{ scale: 0.98 }}
@@ -311,12 +294,12 @@ export default function RecoverPage() {
             )}
           </AnimatePresence>
 
-            <p
-              onClick={() => router.replace("/signin")}
-              className="absolute bottom-10 text-zinc-500 text-sm cursor-pointer hover:text-zinc-300 transition-colors"
-            >
-              Wait, I remember my password
-            </p>
+          <p
+            onClick={() => router.replace("/signin")}
+            className="absolute bottom-10 text-zinc-500 text-sm cursor-pointer hover:text-zinc-300 transition-colors"
+          >
+            Wait, I remember my password
+          </p>
         </div>
       </motion.div>
     </div>
