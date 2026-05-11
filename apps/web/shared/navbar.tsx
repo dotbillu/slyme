@@ -19,6 +19,8 @@ import { useState, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAtom } from "jotai";
 import { useAuth } from "@/app/AuthProvider";
+import { signout } from "@/services/auth/service";
+
 import { socket } from "@/lib/socket";
 import {
   unseenCountAtom,
@@ -43,12 +45,19 @@ export default function Navbar() {
   const [unseenCount, setUnseenCount] = useAtom(unseenCountAtom);
   const [roomsLoaded, setRoomsLoaded] = useAtom(roomsLoadedAtom);
   const [, setRooms] = useAtom(roomsAtom);
-  const [exploreGigsLoaded, setExploreGigsLoaded] = useAtom(exploreGigsLoadedAtom);
+  const [exploreGigsLoaded, setExploreGigsLoaded] = useAtom(
+    exploreGigsLoadedAtom,
+  );
   const [, setExploreGigs] = useAtom(exploreGigsAtom);
-  const [exploreRoomsLoaded, setExploreRoomsLoaded] = useAtom(exploreRoomsLoadedAtom);
+  const [exploreRoomsLoaded, setExploreRoomsLoaded] = useAtom(
+    exploreRoomsLoadedAtom,
+  );
   const [, setExploreRooms] = useAtom(exploreRoomsAtom);
-  const [currentUserProfile, setCurrentUserProfile] = useAtom(currentUserProfileAtom);
-  const { user, checked } = useAuth();
+  const [currentUserProfile, setCurrentUserProfile] = useAtom(
+    currentUserProfileAtom,
+  );
+  const { user, checked, setUser } = useAuth();
+
   const createRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
@@ -106,34 +115,55 @@ export default function Navbar() {
   // Prefetch data for Explore and Network pages
   useEffect(() => {
     if (!user) return;
-    
+
     if (!roomsLoaded) {
-      fetchUserRooms().then((data) => {
-        setRooms(data);
-        setRoomsLoaded(true);
-      }).catch(() => {});
+      fetchUserRooms()
+        .then((data) => {
+          setRooms(data);
+          setRoomsLoaded(true);
+        })
+        .catch(() => {});
     }
 
     if (!exploreGigsLoaded) {
-      fetchAllGigs().then((data) => {
-        setExploreGigs(data);
-        setExploreGigsLoaded(true);
-      }).catch(() => {});
+      fetchAllGigs()
+        .then((data) => {
+          setExploreGigs(data);
+          setExploreGigsLoaded(true);
+        })
+        .catch(() => {});
     }
 
     if (!exploreRoomsLoaded) {
-      fetchAllRooms().then((data) => {
-        setExploreRooms(data);
-        setExploreRoomsLoaded(true);
-      }).catch(() => {});
+      fetchAllRooms()
+        .then((data) => {
+          setExploreRooms(data);
+          setExploreRoomsLoaded(true);
+        })
+        .catch(() => {});
     }
 
     if (!currentUserProfile) {
-      fetchProfile(user.username).then((data) => {
-        setCurrentUserProfile(data);
-      }).catch(() => {});
+      fetchProfile(user.username)
+        .then((data) => {
+          setCurrentUserProfile(data);
+        })
+        .catch(() => {});
     }
-  }, [user, roomsLoaded, exploreGigsLoaded, exploreRoomsLoaded, currentUserProfile, setRooms, setRoomsLoaded, setExploreGigs, setExploreGigsLoaded, setExploreRooms, setExploreRoomsLoaded, setCurrentUserProfile]);
+  }, [
+    user,
+    roomsLoaded,
+    exploreGigsLoaded,
+    exploreRoomsLoaded,
+    currentUserProfile,
+    setRooms,
+    setRoomsLoaded,
+    setExploreGigs,
+    setExploreGigsLoaded,
+    setExploreRooms,
+    setExploreRoomsLoaded,
+    setCurrentUserProfile,
+  ]);
   const isAuthPage = pathname === "/signin" || pathname === "/signup";
   if (!checked) return null;
   if (!user) {
@@ -141,7 +171,13 @@ export default function Navbar() {
       <div className="fixed top-0 left-0 w-full z-[1900]">
         <div className="relative w-full px-5 h-20 flex items-center justify-between bg-black/20 backdrop-blur-xl">
           <div className="flex items-center gap-3">
-            <Image src="/slymelogo.png" alt="logo" width={42} height={24} className="object-contain" />
+            <Image
+              src="/slymelogo.png"
+              alt="logo"
+              width={42}
+              height={24}
+              className="object-contain"
+            />
           </div>
 
           <div className="flex items-center gap-2">
@@ -341,13 +377,13 @@ export default function Navbar() {
                   {/* For now, just one button */}
                   <div className="px-2">
                     <button
-                      onClick={() => {
-                        document.cookie.split(";").forEach((c) => {
-                          document.cookie = c
-                            .replace(/^ +/, "")
-                            .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-                        });
-                        window.location.href = "/signin";
+                      onClick={async () => {
+                        try {
+                          await signout();
+                        } catch (err) {
+                          console.error("Signout error:", err);
+                        }
+                        setUser(null);
                       }}
                       className="w-full text-left px-4 py-3.5 text-[15px] text-white hover:bg-white/10 rounded-xl transition"
                     >

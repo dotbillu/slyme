@@ -121,64 +121,73 @@ export default function Signup() {
 
         {step === "form" && (
           <>
-            <div className="w-full flex flex-col gap-1">
-              <label className="text-zinc-400 text-sm">Name</label>
-              <input
-                name="name"
-                onChange={handleChange}
-                placeholder="Full name"
-                className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
-              />
-            </div>
-
-            <div className="w-full flex flex-col gap-1">
-              <label className="text-zinc-400 text-sm">Username</label>
-              <input
-                name="username"
-                onChange={handleChange}
-                placeholder="username"
-                className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
-              />
-            </div>
-
-            <div className="w-full flex flex-col gap-1">
-              <label className="text-zinc-400 text-sm">Email</label>
-              <input
-                name="email"
-                onChange={handleChange}
-                placeholder="email@example.com"
-                className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
-              />
-            </div>
-
-            <div className="w-full flex flex-col gap-1">
-              <label className="text-zinc-400 text-sm">Password</label>
-              <div className="relative">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleFormSignin();
+              }}
+              className="w-full flex flex-col gap-5 items-center"
+            >
+              <div className="w-full flex flex-col gap-1">
+                <label className="text-zinc-400 text-sm">Name</label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
+                  name="name"
                   onChange={handleChange}
-                  placeholder="password"
+                  placeholder="Full name"
                   className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
               </div>
-            </div>
 
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={handleFormSignin}
-              disabled={loading}
-              className="w-full mt-3 bg-green-500 text-white p-3 rounded-md font-semibold disabled:opacity-50"
-            >
-              {loading ? "Loading..." : "Sign Up"}
-            </motion.button>
+              <div className="w-full flex flex-col gap-1">
+                <label className="text-zinc-400 text-sm">Username</label>
+                <input
+                  name="username"
+                  onChange={handleChange}
+                  placeholder="username"
+                  className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
+                />
+              </div>
+
+              <div className="w-full flex flex-col gap-1">
+                <label className="text-zinc-400 text-sm">Email</label>
+                <input
+                  name="email"
+                  onChange={handleChange}
+                  placeholder="email@example.com"
+                  className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
+                />
+              </div>
+
+              <div className="w-full flex flex-col gap-1">
+                <label className="text-zinc-400 text-sm">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    onChange={handleChange}
+                    placeholder="password"
+                    className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              <motion.button
+                type="submit"
+                whileTap={{ scale: 0.97 }}
+                disabled={loading}
+                className="w-full mt-3 bg-green-500 text-white p-3 rounded-md font-semibold disabled:opacity-50"
+              >
+                {loading ? "Loading..." : "Sign Up"}
+              </motion.button>
+            </form>
+
 
             <div className="flex items-center w-full gap-2">
               <div className="flex-1 h-[1px] bg-zinc-600" />
@@ -200,28 +209,37 @@ export default function Signup() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full flex flex-col gap-4 mt-4"
+            className="w-full mt-4"
           >
-            <p className="text-white text-center text-lg font-semibold">
-              Choose a username
-            </p>
-
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="username"
-              className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
-            />
-
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={handleUsernameSubmit}
-              disabled={loading}
-              className="w-full bg-green-500 text-white p-3 rounded-md font-semibold disabled:opacity-50"
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleUsernameSubmit();
+              }}
+              className="w-full flex flex-col gap-4"
             >
-              {loading ? "Creating..." : "Continue"}
-            </motion.button>
+              <p className="text-white text-center text-lg font-semibold">
+                Choose a username
+              </p>
+
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="username"
+                className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none"
+              />
+
+              <motion.button
+                type="submit"
+                whileTap={{ scale: 0.97 }}
+                disabled={loading}
+                className="w-full bg-green-500 text-white p-3 rounded-md font-semibold disabled:opacity-50"
+              >
+                {loading ? "Creating..." : "Continue"}
+              </motion.button>
+            </form>
           </motion.div>
+
         )}
 
         <p className="text-zinc-400 text-sm">

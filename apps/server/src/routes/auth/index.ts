@@ -2,7 +2,9 @@ import { Router } from "express";
 import signInRoutes from "./signin/index";
 import signUpRoutes from "./signup/index";
 import recoverRoutes from "./recover/index";
+
 import type { Router as ExpressRouter } from "express";
+
 import { requireAuth } from "../../middlewares/auth/jwt";
 import { prisma } from "../../lib/prisma";
 import { cookieOptions } from "../../lib/cookie";
@@ -14,6 +16,11 @@ const router: ExpressRouter = Router();
 router.use("/signin", signInRoutes);
 router.use("/signup", signUpRoutes);
 router.use("/recover", recoverRoutes);
+router.post("/signout", (req, res) => {
+  res.clearCookie("token", cookieOptions);
+  res.json({ message: "Signed out" });
+});
+
 router.get("/me", requireAuth, async (req, res) => {
   const userId = (req as any).userId;
   const token = req.cookies.token;

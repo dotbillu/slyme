@@ -82,7 +82,14 @@ export default function Login() {
       </div>
 
       <motion.div className="w-full lg:w-1/2 xl:w-1/3 h-screen grid place-items-center px-4 py-10">
-        <div className="w-full max-w-md flex flex-col items-center gap-5">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleLogin();
+          }}
+          className="w-full max-w-md flex flex-col items-center gap-5"
+        >
+
           <Image
             src="/slymelogo.png"
             alt="logo"
@@ -125,6 +132,7 @@ export default function Login() {
             </button>
           </div>
 
+
           <div className="w-full flex justify-end -mt-3 -ml-6">
             <span
               onClick={() => router.push("/recover")}
@@ -135,13 +143,14 @@ export default function Login() {
           </div>
 
           <motion.button
-            onClick={handleLogin}
+            type="submit"
             disabled={loading}
             whileTap={{ scale: 1.05 }}
             className="w-full bg-green-500 text-white p-3 rounded-md font-semibold disabled:opacity-50"
           >
             {loading ? "Signing in..." : "Continue"}
           </motion.button>
+
 
           <div className="w-full flex items-center gap-2">
             <div className="flex-1 h-[1px] bg-zinc-600" />
@@ -171,8 +180,9 @@ export default function Login() {
               Sign up
             </span>
           </p>
-        </div>
+        </form>
       </motion.div>
+
     </div>
   );
 }

@@ -133,62 +133,75 @@ export default function RecoverPage() {
                 exit={{ opacity: 0, x: -20 }}
                 className="w-full flex flex-col gap-4"
               >
-                <input
-                  type="text"
-                  placeholder="Email or username"
-                  value={credential}
-                  disabled={showOtp || loading}
-                  onChange={(e) => setCredential(e.target.value)}
-                  className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
-                />
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (showOtp) {
+                      handleVerifyOtp();
+                    } else {
+                      handleSendOtp();
+                    }
+                  }}
+                  className="w-full flex flex-col gap-4"
+                >
+                  <input
+                    type="text"
+                    placeholder="Email or username"
+                    value={credential}
+                    disabled={showOtp || loading}
+                    onChange={(e) => setCredential(e.target.value)}
+                    className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                  />
 
-                {showOtp && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="space-y-4"
-                  >
-                    <input
-                      type="text"
-                      placeholder="Enter 6-digit OTP"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
-                    />
+                  {showOtp && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="space-y-4"
+                    >
+                      <input
+                        type="text"
+                        placeholder="Enter 6-digit OTP"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                        className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                      />
+                      <motion.button
+                        type="submit"
+                        disabled={loading || otp.length < 6}
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full bg-green-500 text-white p-3 rounded-md font-semibold disabled:opacity-50"
+                      >
+                        {loading ? "Verifying..." : "Verify OTP"}
+                      </motion.button>
+
+                      <div className="w-full text-center">
+                        <button
+                          type="button"
+                          onClick={handleSendOtp}
+                          disabled={loading || resendCooldown > 0}
+                          className="text-sm text-zinc-400 hover:text-green-400 transition-colors disabled:opacity-50 disabled:hover:text-zinc-400"
+                        >
+                          {resendCooldown > 0
+                            ? `Resend OTP in ${resendCooldown}s`
+                            : "Resend OTP"}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {!showOtp && (
                     <motion.button
-                      onClick={handleVerifyOtp}
-                      disabled={loading || otp.length < 6}
+                      type="submit"
+                      disabled={loading || !credential}
                       whileTap={{ scale: 0.98 }}
                       className="w-full bg-green-500 text-white p-3 rounded-md font-semibold disabled:opacity-50"
                     >
-                      {loading ? "Verifying..." : "Verify OTP"}
+                      {loading ? "Sending..." : "Get OTP"}
                     </motion.button>
+                  )}
+                </form>
 
-                    <div className="w-full text-center">
-                      <button
-                        type="button"
-                        onClick={handleSendOtp}
-                        disabled={loading || resendCooldown > 0}
-                        className="text-sm text-zinc-400 hover:text-green-400 transition-colors disabled:opacity-50 disabled:hover:text-zinc-400"
-                      >
-                        {resendCooldown > 0
-                          ? `Resend OTP in ${resendCooldown}s`
-                          : "Resend OTP"}
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {!showOtp && (
-                  <motion.button
-                    onClick={handleSendOtp}
-                    disabled={loading || !credential}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full bg-green-500 text-white p-3 rounded-md font-semibold disabled:opacity-50"
-                  >
-                    {loading ? "Sending..." : "Get OTP"}
-                  </motion.button>
-                )}
               </motion.div>
             )}
 
@@ -200,53 +213,68 @@ export default function RecoverPage() {
                 exit={{ opacity: 0, x: -20 }}
                 className="w-full flex flex-col gap-4"
               >
-                <div className="relative">
-                  <input
-                    type={showNewPassword ? "text" : "password"}
-                    placeholder="New Password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
-                  >
-                    {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm New Password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff size={20} />
-                    ) : (
-                      <Eye size={20} />
-                    )}
-                  </button>
-                </div>
-                <motion.button
-                  onClick={handleResetPassword}
-                  disabled={
-                    loading || !newPassword || newPassword !== confirmPassword
-                  }
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full bg-green-500 text-white p-3 rounded-md font-semibold disabled:opacity-50"
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleResetPassword();
+                  }}
+                  className="w-full flex flex-col gap-4"
                 >
-                  {loading ? "Updating..." : "Reset Password"}
-                </motion.button>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="New Password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                    >
+                      {showNewPassword ? (
+                        <EyeOff size={20} />
+                      ) : (
+                        <Eye size={20} />
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm New Password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full p-3 rounded-md bg-zinc-800 text-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff size={20} />
+                      ) : (
+                        <Eye size={20} />
+                      )}
+                    </button>
+                  </div>
+                  <motion.button
+                    type="submit"
+                    disabled={
+                      loading || !newPassword || newPassword !== confirmPassword
+                    }
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full bg-green-500 text-white p-3 rounded-md font-semibold disabled:opacity-50"
+                  >
+                    {loading ? "Updating..." : "Reset Password"}
+                  </motion.button>
+                </form>
+
               </motion.div>
             )}
 

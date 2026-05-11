@@ -127,3 +127,11 @@ export async function resetPasswordRecover(
   });
   return handleResponse(res);
 }
+
+export async function signout(): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/auth/signout`, {
+    method: "POST",
+    credentials: "include",
+  });
+  return handleResponse(res);
+}
