@@ -8,7 +8,7 @@
   <h1>SLYME</h1>
 </div>
 
-**Slyme** is a high-performance, map-based social ecosystem designed for local community engagement. It transforms physical coordinates into digital hubs, allowing users to discover "MapRooms" and local "Gigs" in real-time.
+**Slyme** is a map-based social ecosystem designed for community engagement. It transforms physical coordinates into digital hubs, allowing users to discover "MapRooms" and local "Gigs" on their map.
 
 ---
 
