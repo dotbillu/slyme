@@ -263,6 +263,7 @@ export default function ChatArea({
       {/* Messages */}
       <div
         ref={messagesContainerRef}
+        data-chat-container
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-4 py-4 space-y-0.5"
       >

@@ -66,12 +66,7 @@ export default function RoomChatPage() {
     const handleConnect = () => {
       setConnected(true)
       joinAllRooms()
-      if (document.visibilityState === "visible" && document.hasFocus()) {
-        socket.emit("mark_seen", { roomId })
-      }
-      setRooms((prev) =>
-        prev.map((r) => (r.id === roomId ? { ...r, unreadCount: 0 } : r))
-      )
+      // Don't mark_seen here — wait until messages are actually loaded and visible
     }
 
     const handleConnectError = (err: Error) => {
@@ -86,12 +81,34 @@ export default function RoomChatPage() {
       if (rid === activeRoomRef.current) {
         setHasMore(msgs.length >= 50)
       }
+      // Don't mark_seen here — loading messages != seeing them.
+      // Seen is handled by the markSeenIfVisible effect below.
     }
 
     const handleReceiveMessage = async (msg: Message) => {
       await db.messages.put(msg)
-      if (msg.roomId === activeRoomRef.current && document.visibilityState === "visible" && document.hasFocus()) {
-        socket.emit("mark_seen", { roomId: msg.roomId })
+      const isOnRoom = window.location.pathname === `/network/${msg.roomId}`
+      if (isOnRoom && msg.roomId === activeRoomRef.current && document.visibilityState === "visible" && document.hasFocus()) {
+        // Only mark seen if user is scrolled near the bottom (can actually see new messages)
+        const container = document.querySelector("[data-chat-container]")
+        const isNearBottom = container
+          ? container.scrollHeight - container.scrollTop - container.clientHeight < 150
+          : false
+        if (isNearBottom) {
+          socket.emit("mark_seen", { roomId: msg.roomId })
+        } else {
+          // User is scrolled up, treat as unread
+          setRooms((prev) =>
+            prev.map((room) => {
+              if (room.id !== msg.roomId) return room
+              return {
+                ...room,
+                lastMessage: msg,
+                unreadCount: (room.unreadCount || 0) + (msg.senderId !== user!.id ? 1 : 0),
+              }
+            })
+          )
+        }
       } else {
         setRooms((prev) =>
           prev.map((room) => {
@@ -120,12 +137,7 @@ export default function RoomChatPage() {
     if (socket.connected) {
       setConnected(true)
       joinAllRooms()
-      if (document.visibilityState === "visible" && document.hasFocus()) {
-        socket.emit("mark_seen", { roomId })
-      }
-      setRooms((prev) =>
-        prev.map((r) => (r.id === roomId ? { ...r, unreadCount: 0 } : r))
-      )
+      // Don't mark_seen here — will be handled by room_messages callback
     }
 
     return () => {
@@ -137,6 +149,49 @@ export default function RoomChatPage() {
       socket.off("disconnect", handleDisconnect)
     }
   }, [user, roomId, rooms.length, setRooms])
+
+  // Mark messages as seen when user is actively viewing the room
+  // Uses a delay to avoid marking seen on quick room switches
+  useEffect(() => {
+    if (!user || !roomId) return
+
+    let seenTimeout: NodeJS.Timeout | null = null
+
+    const isOnThisRoom = () => {
+      return window.location.pathname === `/network/${roomId}`
+    }
+
+    const markSeenIfVisible = () => {
+      if (!isOnThisRoom()) return
+      if (document.visibilityState !== "visible" || !document.hasFocus()) return
+      const container = document.querySelector("[data-chat-container]")
+      const isNearBottom = container
+        ? container.scrollHeight - container.scrollTop - container.clientHeight < 150
+        : true // if container not mounted yet, assume bottom (initial load)
+      if (isNearBottom) {
+        socket.emit("mark_seen", { roomId })
+        setRooms((prev) =>
+          prev.map((r) => (r.id === roomId ? { ...r, unreadCount: 0 } : r))
+        )
+      }
+    }
+
+    // Delay marking seen by 1.5s after entering a room — if user leaves quickly, it won't fire
+    seenTimeout = setTimeout(markSeenIfVisible, 1500)
+
+    const handleVisibilityChange = () => {
+      markSeenIfVisible()
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("focus", handleVisibilityChange)
+
+    return () => {
+      if (seenTimeout) clearTimeout(seenTimeout)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("focus", handleVisibilityChange)
+    }
+  }, [user, roomId, setRooms])
 
   const sendMessage = useCallback(
     (content: string) => {
@@ -164,12 +219,10 @@ export default function RoomChatPage() {
       if (id === roomId) return
       setHasMore(true)
       setSidebarOpen(false)
-      setRooms((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, unreadCount: 0 } : r))
-      )
+      // Don't clear unreadCount here — let the mark_seen delay handle it
       router.push(`/network/${id}`)
     },
-    [roomId, router, setRooms]
+    [roomId, router]
   )
 
   const currentRoom = rooms.find((r) => r.id === roomId)
