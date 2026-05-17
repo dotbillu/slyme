@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: ["/", "/explore", "/search", "/network"],
       disallow: ["/api/", "/signin", "/signup"],
     },
-    sitemap: "https://slyme.in/sitemap.xml", 
+    sitemap: "https://slyme.dotbillu.in/sitemap.xml",
   };
 }

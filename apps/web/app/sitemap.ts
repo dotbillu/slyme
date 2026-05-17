@@ -3,7 +3,7 @@ import { fetchAllRooms } from "@/services/room/service";
 import { Room } from "@/types/room";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = "https://slyme.in";
+  const baseUrl = "https://slyme.dotbillu.in";
 
   const routes = ["", "/explore", "/search", "/network", "/signin", "/signup"].map((route) => ({
     url: `${baseUrl}${route}`,
