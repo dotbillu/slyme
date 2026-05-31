@@ -193,10 +193,11 @@ export default function ExplorePage() {
       "slyme_avatar_nudge_hidden",
     );
 
-    if (
-      !user.avatarUrl ||
-      (!user.bio && !nudgeShownSession && !nudgeHiddenPermanent)
-    ) {
+    if (nudgeHiddenPermanent) {
+      return;
+    }
+
+    if ((!user.avatarUrl || !user.bio) && !nudgeShownSession) {
       const timer = setTimeout(() => {
         setShowNudge(true);
         sessionStorage.setItem("slyme_avatar_nudge_shown", "true");
@@ -210,6 +211,18 @@ export default function ExplorePage() {
       localStorage.setItem("slyme_avatar_nudge_hidden", "true");
     }
     setShowNudge(false);
+  };
+
+  const handleDontShowAgainToggle = () => {
+    setDontShowAgain((current) => {
+      const next = !current;
+      if (next) {
+        localStorage.setItem("slyme_avatar_nudge_hidden", "true");
+      } else {
+        localStorage.removeItem("slyme_avatar_nudge_hidden");
+      }
+      return next;
+    });
   };
 
   // URL sync
@@ -406,7 +419,7 @@ export default function ExplorePage() {
 
                 <div className="flex items-center justify-center gap-2">
                   <div
-                    onClick={() => setDontShowAgain(!dontShowAgain)}
+                    onClick={handleDontShowAgainToggle}
                     className={`w-4 h-4 rounded-md border flex items-center justify-center cursor-pointer transition-all ${
                       dontShowAgain
                         ? "bg-[#5cb038] border-[#5cb038]"
@@ -418,7 +431,7 @@ export default function ExplorePage() {
                     )}
                   </div>
                   <span
-                    onClick={() => setDontShowAgain(!dontShowAgain)}
+                    onClick={handleDontShowAgainToggle}
                     className="text-[11px] text-zinc-500 cursor-pointer hover:text-zinc-400 transition-colors select-none font-medium"
                   >
                     Don't show again
