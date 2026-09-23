@@ -638,7 +638,7 @@ function RoomPanel({
           animate={{ x: 0 }}
           exit={{ x: "100%" }}
           transition={{ type: "spring", damping: 26, stiffness: 260 }}
-          className="fixed top-0 right-0 bottom-0 w-[420px] lg:w-[480px] z-[1000] bg-zinc-950 border-l border-zinc-800/40"
+          className={`fixed ${isLoggedIn ? "top-0" : "top-20"} right-0 bottom-0 w-[420px] lg:w-[480px] z-[1000] bg-zinc-950 border-l border-zinc-800/40`}
         >
           <button
             onClick={onClose}
